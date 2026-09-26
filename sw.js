@@ -1,5 +1,5 @@
 /* Célkövető Naptár — service worker (offline PWA) */
-const CACHE = 'gt-pwa-v3';
+const CACHE = 'gt-pwa-v4';
 const SHELL = [
   'index.html',
   'manifest.json',
@@ -35,8 +35,10 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put('index.html', copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put('index.html', copy));
+          }
           return res;
         })
         .catch(() => caches.match('index.html'))
