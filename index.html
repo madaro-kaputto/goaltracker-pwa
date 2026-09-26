@@ -2,7 +2,7 @@
 <html lang="hu">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
 <title>Célkövető Naptár</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'">
 <link rel="manifest" href="manifest.json">
@@ -22,7 +22,7 @@
   --r:14px; --rs:8px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;min-height:100dvh;line-height:1.6;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;min-height:100dvh;line-height:1.6;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;overflow-x:hidden;}
 button,.tab,.btn,.qc-btn,.cell,.dg-cell,.gselect,.fcheck{touch-action:manipulation;}
 
 /* HEADER */
@@ -279,6 +279,7 @@ button,.tab,.btn,.qc-btn,.cell,.dg-cell,.gselect,.fcheck{touch-action:manipulati
   .modal{max-width:100%;}
   .overlay{padding:16px 12px;}
   .footer{padding-bottom:calc(64px + env(safe-area-inset-bottom));}
+  .ovprog-mo,.ovprog-proj,.ovprog-val{white-space:normal;word-break:break-word;}
 }
 </style>
 </head>
