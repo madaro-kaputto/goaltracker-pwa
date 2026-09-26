@@ -1,0 +1,17 @@
+{
+  "name": "Célkövető Naptár",
+  "short_name": "Célkövető",
+  "description": "Megtakarítási célkövető naptár + átalányadós TB/szocho kalkulátor",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0f0e",
+  "theme_color": "#0f0f0e",
+  "lang": "hu",
+  "icons": [
+    { "src": "pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

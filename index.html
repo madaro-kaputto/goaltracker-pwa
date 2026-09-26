@@ -1,0 +1,2256 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Célkövető Naptár</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Célkövető">
+<link rel="apple-touch-icon" href="pwa/icon-180.png">
+<style>
+:root {
+  --bg:#0f0f0e; --bg2:#181817; --bg3:#222220; --bg4:#2c2c2a;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#f0ede8; --text2:#9e9b94; --text3:#5e5c57;
+  --green:#3ecf8e; --green-dim:rgba(62,207,142,0.1); --green-b:rgba(62,207,142,0.28);
+  --amber:#f5a623; --amber-dim:rgba(245,166,35,0.1); --amber-b:rgba(245,166,35,0.28);
+  --red:#e05252; --red-dim:rgba(224,82,82,0.1); --red-b:rgba(224,82,82,0.28);
+  --blue:#4f9cf9; --blue-dim:rgba(79,156,249,0.1); --blue-b:rgba(79,156,249,0.28);
+  --r:14px; --rs:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;min-height:100dvh;line-height:1.6;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;}
+button,.tab,.btn,.qc-btn,.cell,.dg-cell,.gselect,.fcheck{touch-action:manipulation;}
+
+/* HEADER */
+.hdr{padding:40px 32px 26px;border-bottom:1px solid var(--border);background:var(--bg2);position:relative;overflow:hidden;}
+.hdr::before{content:'';position:absolute;top:-80px;right:-80px;width:350px;height:350px;background:radial-gradient(circle,rgba(62,207,142,0.07) 0%,transparent 65%);pointer-events:none;}
+.hdr-lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--green);margin-bottom:10px;}
+.hdr-title{font-size:clamp(24px,4.5vw,40px);font-weight:300;line-height:1.1;margin-bottom:8px;letter-spacing:-.5px;}
+.hdr-title em{color:var(--green);font-style:italic;font-weight:600;}
+.hdr-sub{font-size:13px;color:var(--text2);}
+
+/* GOAL SWITCHER */
+.gswitch{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;}
+.gselect{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:8px 12px;font-size:13px;font-weight:600;color:var(--text);font-family:inherit;outline:none;min-width:220px;}
+.gselect:focus{border-color:var(--green);}
+.gadd{background:var(--green);color:#0a0a09;border:none;border-radius:var(--rs);padding:8px 14px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .18s;}
+.gadd:hover{opacity:.85;}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--border);border-bottom:1px solid var(--border);}
+.metric{background:var(--bg2);padding:18px 22px;}
+.metric-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:5px;}
+.metric-val{font-size:21px;font-weight:600;line-height:1;}
+.metric-sub{font-size:11px;color:var(--text2);margin-top:3px;}
+.cg{color:var(--green);} .ca{color:var(--amber);} .cr{color:var(--red);} .cb{color:var(--blue);}
+
+/* OVERALL PROGRESS */
+.ovprog{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.ovprog-lbl{font-size:12px;color:var(--text2);white-space:nowrap;}
+.ovprog-outer{flex:1;min-width:120px;background:var(--bg3);border-radius:99px;height:6px;overflow:hidden;}
+.ovprog-inner{height:6px;border-radius:99px;background:var(--green);transition:width .8s ease;}
+.ovprog-val{font-size:13px;font-weight:700;color:var(--green);white-space:nowrap;}
+.ovprog-mo{font-size:12px;color:var(--text3);white-space:nowrap;}
+.ovprog-proj{font-size:12px;color:var(--text3);white-space:nowrap;}
+.ovprog-proj b{color:var(--green);font-weight:700;}
+.ovprog-proj.warn{color:var(--amber);}
+.ovprog-proj.warn b{color:var(--amber);}
+.streak-badge{font-size:11px;font-weight:700;color:var(--amber);background:var(--amber-dim);border:1px solid var(--amber-b);padding:3px 10px;border-radius:99px;white-space:nowrap;}
+
+/* MAIN */
+.main{max-width:1240px;margin:0 auto;padding:28px 22px 80px;}
+
+/* TABS */
+.tabs{display:flex;gap:3px;margin-bottom:22px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:4px;}
+.tab{flex:1;padding:9px 6px;border:none;background:transparent;color:var(--text2);font-family:inherit;font-size:13px;cursor:pointer;border-radius:10px;transition:all .18s;white-space:nowrap;}
+.tab:hover{color:var(--text);background:var(--bg3);}
+.tab.active{background:var(--bg4);color:var(--text);font-weight:600;}
+
+/* SECTION LABEL */
+.slbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;}
+
+/* INFO BOXES */
+.ibox{border-radius:var(--rs);padding:12px 16px;font-size:13px;line-height:1.65;margin-bottom:16px;}
+.ibox-b{background:var(--blue-dim);border:1px solid var(--blue-b);color:var(--blue);}
+.ibox-g{background:var(--green-dim);border:1px solid var(--green-b);color:var(--green);}
+.ibox-a{background:var(--amber-dim);border:1px solid var(--amber-b);color:var(--amber);}
+.ibox-r{background:var(--red-dim);border:1px solid var(--red-b);color:var(--red);}
+
+/* CALENDAR */
+.cal-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px;}
+.cal-sum-item{background:var(--bg2);padding:14px 18px;}
+.cs-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+.cs-val{font-size:19px;font-weight:700;}
+.cs-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+
+.cal-toggle{display:inline-flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:3px;margin-bottom:20px;}
+.cv-btn{border:none;background:transparent;color:var(--text2);font-family:inherit;font-size:12px;font-weight:600;padding:7px 16px;border-radius:6px;cursor:pointer;transition:all .18s;}
+.cv-btn.active{background:var(--bg4);color:var(--text);}
+
+.yr{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:18px;}
+.yr-name{font-size:16px;font-weight:700;margin-bottom:14px;color:var(--text);}
+.yr-name span{color:var(--text3);font-weight:400;font-size:12px;margin-left:8px;}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;}
+.cell{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;cursor:pointer;transition:all .18s;position:relative;}
+.cell:hover{transform:translateY(-2px);border-color:var(--border2);}
+.cell.off{cursor:default;opacity:.35;}
+.cell.off:hover{transform:none;border-color:var(--border);}
+.cell-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.cell-mo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);}
+.cell-amt{font-size:16px;font-weight:700;line-height:1.1;}
+.cell-plan{font-size:10px;color:var(--text3);margin-top:2px;}
+.cell-pay{font-size:10px;color:var(--blue);font-weight:600;margin-top:1px;}
+.cell-rate{font-size:10px;font-weight:700;margin-top:1px;}
+.cell-stat{font-size:10px;font-weight:700;margin-top:6px;display:inline-block;padding:2px 8px;border-radius:99px;}
+.dot{width:8px;height:8px;border-radius:99px;background:var(--text3);flex-shrink:0;}
+.cell.done{border-color:var(--green-b);}
+.cell.done .dot{background:var(--green);}
+.cell.done .cell-amt{color:var(--green);}
+.cell.done .cell-stat{background:var(--green-dim);color:var(--green);border:1px solid var(--green-b);}
+.cell.short{border-color:var(--amber-b);}
+.cell.short .dot{background:var(--amber);}
+.cell.short .cell-amt{color:var(--amber);}
+.cell.short .cell-stat{background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-b);}
+.cell.now{border-color:var(--blue-b);}
+.cell.now .dot{background:var(--blue);}
+.cell.now .cell-amt{color:var(--blue);}
+.cell.now .cell-stat{background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-b);}
+.cell.missed{border-color:var(--red-b);}
+.cell.missed .dot{background:var(--red);}
+.cell.missed .cell-amt{color:var(--red);}
+.cell.missed .cell-stat{background:var(--red-dim);color:var(--red);border:1px solid var(--red-b);}
+.cell.future .cell-amt{color:var(--text);}
+.cell.future .cell-stat{color:var(--text3);}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);font-size:11px;color:var(--text2);margin-bottom:24px;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.legend .ld{width:9px;height:9px;border-radius:99px;display:inline-block;}
+.ld-g{background:var(--green);} .ld-a{background:var(--amber);} .ld-b{background:var(--blue);} .ld-r{background:var(--red);} .ld-n{background:var(--text3);}
+
+/* DAILY VIEW */
+.dv-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;}
+.dv-title{font-size:17px;font-weight:600;}
+.dv-sub{font-size:12px;color:var(--text3);text-align:center;margin-bottom:14px;}
+.dgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;}
+.dg-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);text-align:center;padding-bottom:6px;}
+.dg-cell{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);min-height:56px;padding:6px 8px;cursor:pointer;transition:all .18s;display:flex;flex-direction:column;gap:2px;}
+.dg-cell:hover{border-color:var(--border2);}
+.dg-cell.off{cursor:default;opacity:.3;}
+.dg-cell.off:hover{border-color:var(--border);}
+.dg-cell.today{border-color:var(--blue-b);}
+.dg-cell.has{border-color:var(--green-b);}
+.dg-num{font-size:11px;color:var(--text2);}
+.dg-amt{font-size:12px;font-weight:700;color:var(--text3);margin-top:auto;text-align:right;}
+.dg-amt.on{color:var(--green);}
+.dg-input{width:100%;background:var(--bg2);border:1px solid var(--green-b);border-radius:4px;padding:3px;font-size:11px;color:var(--text);font-family:inherit;outline:none;margin-top:auto;}
+.dg-div{grid-column:1 / -1;background:var(--bg4);color:var(--text2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;text-align:center;border-radius:var(--rs);padding:5px;margin:2px 0;}
+.dg-cell.work{position:relative;}
+.dg-cell.work.on{border-color:var(--green-b);}
+.dg-cell.work.on .dg-amt{color:var(--green);}
+.dg-earn{font-size:10px;font-weight:700;color:var(--green);margin-top:auto;text-align:right;}
+.dg-x{position:absolute;top:3px;right:7px;width:16px;height:16px;line-height:14px;text-align:center;font-size:12px;color:var(--red);border:1px solid var(--red-b);border-radius:99px;background:var(--red-dim);cursor:pointer;}
+.dg-x:hover{background:var(--red);color:#fff;}
+.fcheck{width:18px;height:18px;accent-color:var(--green);cursor:pointer;}
+
+/* SETTINGS */
+.settings{max-width:100%;}
+.set{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;margin-bottom:14px;}
+.set-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:16px;}
+.frow{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.frow:last-child{margin-bottom:0;}
+.flbl{font-size:12px;color:var(--text2);}
+.flbl small{color:var(--text3);display:block;font-size:11px;margin-top:2px;}
+.finput{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 12px;font-size:14px;color:var(--text);font-family:inherit;outline:none;transition:border-color .18s;width:100%;}
+.finput:focus{border-color:var(--green);}
+.frow-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn{background:var(--green);color:#0a0a09;border:none;border-radius:var(--rs);padding:10px 20px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:opacity .18s;}
+.btn:hover{opacity:.85;}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
+.btn-ghost:hover{border-color:var(--text2);color:var(--text);opacity:1;}
+.btn-red{background:transparent;border:1px solid var(--red-b);color:var(--red);}
+.btn-red:hover{background:var(--red-dim);opacity:1;}
+.btn-mini{padding:7px 14px;font-size:12px;}
+.actions{display:flex;gap:10px;flex-wrap:wrap;}
+.hint{font-size:12px;color:var(--text3);margin-top:2px;}
+.hint b{color:var(--text2);}
+
+/* HISTORY */
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);margin-bottom:8px;flex-wrap:wrap;cursor:pointer;transition:border-color .18s;}
+.hrow:hover{border-color:var(--border2);}
+.hrow .h-l{font-size:13px;font-weight:600;}
+.hrow .h-s{font-size:11px;color:var(--text3);font-weight:400;}
+.hrow .h-r{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.hrow .h-amt{font-size:14px;font-weight:700;}
+.hrow .h-diff{font-size:11px;font-weight:700;}
+.h-pos{color:var(--green);} .h-neg{color:var(--red);}
+.hbadge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.05em;}
+.hb-g{background:var(--green-dim);color:var(--green);border:1px solid var(--green-b);}
+.hb-a{background:var(--amber-dim);color:var(--amber);border:1px solid var(--amber-b);}
+.hb-r{background:var(--red-dim);color:var(--red);border:1px solid var(--red-b);}
+.hb-b{background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-b);}
+.hb-n{background:var(--bg3);color:var(--text3);border:1px solid var(--border);}
+.h-total{background:var(--bg3);border-color:var(--border2);}
+.h-total .h-amt{color:var(--green);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:24px;}
+.st-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;}
+.st-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+.st-val{font-size:20px;font-weight:700;line-height:1.1;}
+.st-sub{font-size:11px;color:var(--text2);margin-top:3px;}
+.chart-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:24px;}
+.chart-leg{display:flex;gap:16px;font-size:11px;color:var(--text2);margin-bottom:12px;}
+.chart-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;}
+.bar-row{display:flex;align-items:flex-end;gap:10px;margin-bottom:8px;}
+.bar-lbl{width:36px;font-size:11px;color:var(--text3);text-align:right;text-transform:uppercase;}
+.bar-track{flex:1;height:110px;background:var(--bg3);border-radius:var(--rs);display:flex;align-items:flex-end;gap:4px;padding:6px;}
+.bar-plan{width:10px;background:var(--bg4);border-radius:4px 4px 0 0;}
+.bar-act{width:16px;border-radius:4px 4px 0 0;}
+.bar-act.ok{background:var(--green);}
+.bar-act.low{background:var(--amber);}
+.bar-val{width:56px;font-size:11px;color:var(--text2);}
+.milestone{display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;margin-bottom:8px;font-size:13px;flex-wrap:wrap;gap:8px;}
+.m-pct{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;color:var(--green);background:var(--green-dim);border:1px solid var(--green-b);white-space:nowrap;}
+.m-empty{font-size:13px;color:var(--text3);}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow-y:auto;}
+.overlay.show{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:24px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.modal-wide{max-width:1180px;}
+.m-title{font-size:19px;font-weight:600;margin-bottom:4px;}
+.m-sub{font-size:12px;color:var(--text2);margin-bottom:16px;}
+.m-row{display:flex;justify-content:space-between;align-items:center;background:var(--bg3);border-radius:var(--rs);padding:10px 14px;margin-bottom:8px;font-size:13px;}
+.m-row .mr-l{color:var(--text2);}
+.m-row .mr-v{font-weight:700;color:var(--text);}
+.m-actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+.m-sum{margin-top:4px;}
+
+/* CALCULATOR */
+.calc-static{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rs);padding:10px 12px;font-size:14px;font-weight:700;color:var(--text);}
+.calc-res{margin-top:8px;}
+.calc-note{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.6;}
+.calc-note b{color:var(--text);}
+.calc-bar{display:flex;height:14px;border-radius:99px;overflow:hidden;margin-top:14px;background:var(--bg3);border:1px solid var(--border);}
+.calc-bar .cb{height:100%;transition:width .25s ease;}
+.cb-tax{background:var(--red);}
+.cb-acc{background:var(--amber);}
+.cb-net{background:var(--green);}
+.calc-legend{display:flex;gap:16px;font-size:11px;color:var(--text2);padding:4px 2px;flex-wrap:wrap;}
+.calc-legend .cb-i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;}
+.cb-i-tax{background:var(--red);}
+.cb-i-acc{background:var(--amber);}
+.cb-i-net{background:var(--green);}
+.qc{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;}
+.qc-btn{border:1px solid var(--border2);background:var(--bg3);color:var(--text2);font-family:inherit;font-size:11px;font-weight:600;padding:5px 9px;border-radius:6px;cursor:pointer;transition:all .15s;}
+.qc-btn:hover{border-color:var(--text2);color:var(--text);}
+.qc-btn.active{background:var(--green-dim);border-color:var(--green-b);color:var(--green);}
+.dtable-wrap{overflow-x:auto;margin-top:8px;border:1px solid var(--border);border-radius:var(--rs);}
+.dtable{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;}
+.dtable th{background:var(--bg4);color:var(--text2);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:7px 9px;text-align:right;position:sticky;top:0;}
+.dtable th:first-child{text-align:center;}
+.dtable td{padding:6px 9px;text-align:right;border-top:1px solid var(--border);color:var(--text);}
+.dtable td.dn{text-align:center;color:var(--text3);font-weight:700;}
+.dtable td.dneg{color:var(--red);}
+.dtable td.drem{color:var(--green);font-weight:700;}
+.dtable tbody tr:hover{background:var(--bg3);}
+
+/* FOOTER */
+.footer{text-align:center;padding:22px;font-size:12px;color:var(--text3);border-top:1px solid var(--border);}
+.footer strong{color:var(--green);}
+
+@media(max-width:580px){
+  .hdr{padding:calc(20px + env(safe-area-inset-top)) 18px 18px;}
+  .main{padding:18px 14px calc(84px + env(safe-area-inset-bottom));}
+  .tabs{position:fixed;left:0;right:0;bottom:0;margin:0;border-radius:0;border:none;border-top:1px solid var(--border);z-index:40;padding:6px 4px calc(6px + env(safe-area-inset-bottom));flex-wrap:nowrap;background:rgba(24,24,23,0.96);backdrop-filter:blur(10px);}
+  .tab{font-size:11px;padding:10px 3px;}
+  .tab:active,.btn:active,.qc-btn:active,.cell:active,.dg-cell:active{transform:scale(.97);}
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .frow-2{grid-template-columns:1fr;}
+  .cgrid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));}
+  .dgrid{padding:8px;gap:3px;}
+  .dg-cell{min-height:44px;padding:4px;}
+  .finput,.dg-input{font-size:16px;}
+  .dtable{font-size:11px;}
+  .modal{max-width:100%;}
+  .overlay{padding:16px 12px;}
+  .footer{padding-bottom:calc(64px + env(safe-area-inset-bottom));}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-lbl">Megtakarítási naptár · célkövető</div>
+  <div class="hdr-title" id="hdr-title">A te utad a <em>2 700 000 Ft</em>-hoz</div>
+  <div class="hdr-sub" id="hdr-sub"></div>
+  <div class="gswitch">
+    <select class="gselect" id="goal-switch"></select>
+    <button class="gadd" onclick="addGoal()">+ Új cél</button>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="metric"><div class="metric-lbl">Cél összeg</div><div class="metric-val cg" id="m-target">0</div><div class="metric-sub">forint</div></div>
+  <div class="metric"><div class="metric-lbl">Havi terv</div><div class="metric-val cg" id="m-plan">0</div><div class="metric-sub">félretett összeg / hó</div></div>
+  <div class="metric"><div class="metric-lbl">Megtakarítva</div><div class="metric-val" id="m-saved">0</div><div class="metric-sub" id="m-saved-sub">eddig összesen</div></div>
+  <div class="metric"><div class="metric-lbl">Hátralévő</div><div class="metric-val" id="m-left">0</div><div class="metric-sub">a célhoz</div></div>
+  <div class="metric"><div class="metric-lbl">Időkeret</div><div class="metric-val" style="color:var(--text)" id="m-months">0</div><div class="metric-sub">hónap</div></div>
+</div>
+
+<div class="ovprog">
+  <div class="ovprog-lbl">Összesített előrehaladás</div>
+  <div class="ovprog-outer"><div class="ovprog-inner" id="ov-prog" style="width:0%"></div></div>
+  <div class="ovprog-val" id="ov-val">0 Ft</div>
+  <div class="ovprog-mo" id="ov-mo">0 / 0 hónap lezárva</div>
+  <span class="streak-badge" id="ov-streak" style="display:none"></span>
+</div>
+<div class="ovprog" style="border-bottom:none;padding-top:4px">
+  <div class="ovprog-proj" id="ov-proj"></div>
+</div>
+<div class="ovprog" id="daily-tracker" style="display:none">
+  <div class="ovprog-lbl">Napi bérkövető</div>
+  <div class="ovprog-outer"><div class="ovprog-inner" id="dv-prog" style="width:0%"></div></div>
+  <div class="ovprog-val" id="dv-val">0 Ft</div>
+  <div class="ovprog-mo" id="dv-mo">0 h · 0 munkanap</div>
+</div>
+<div class="ovprog" id="daily-tracker-detail" style="display:none;border-bottom:none;padding-top:6px">
+  <div class="ovprog-proj" id="dv-detail"></div>
+</div>
+
+<div class="main">
+
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('cal')">Naptár</button>
+    <button class="tab" onclick="setTab('stat')">Statisztika</button>
+    <button class="tab" onclick="setTab('hist')">Előzmények</button>
+    <button class="tab" onclick="setTab('calc')">Kalkulátor</button>
+    <button class="tab" onclick="setTab('set')">Beállítások</button>
+  </div>
+
+  <!-- CALENDAR -->
+  <div id="tab-cal">
+    <div class="cal-toggle">
+      <button class="cv-btn active" id="cv-month" onclick="setCalView('month')">Havi nézet</button>
+      <button class="cv-btn" id="cv-day" onclick="setCalView('day')">Napi nézet</button>
+    </div>
+    <div class="cal-summary" id="cal-summary"></div>
+    <div class="ibox ibox-b" id="cal-tip"></div>
+    <div id="years"></div>
+    <div id="day-view" style="display:none">
+      <div class="cal-toggle" style="margin-bottom:14px">
+        <button class="cv-btn active" id="dm-save" onclick="setDayMode('save')">Megtakarítás</button>
+        <button class="cv-btn" id="dm-work" onclick="setDayMode('work')">Munkanap-bér</button>
+        <button class="cv-btn" id="dm-set" onclick="setDayMode('set')">Bérbeállítás</button>
+      </div>
+      <div class="dv-nav">
+        <button class="btn btn-ghost btn-mini" onclick="dayNav(-1)">‹ Előző</button>
+        <div class="dv-title" id="dv-title"></div>
+        <button class="btn btn-ghost btn-mini" onclick="dayNav(1)">Következő ›</button>
+      </div>
+      <div class="dv-sub" id="dv-sub"></div>
+      <div class="dgrid" id="dv-grid"></div>
+      <div id="dv-work-actions" style="display:none;margin-top:14px">
+        <button class="btn" onclick="closeWorkMonth()">Hónap lezárása</button>
+        <span class="hint" style="margin-left:10px" id="dv-close-hint"></span>
+      </div>
+      <div class="ibox ibox-g" style="margin-top:14px" id="dv-tip"></div>
+    </div>
+    <div class="legend">
+      <span><i class="ld ld-g"></i> Lezárva — terv teljesítve</span>
+      <span><i class="ld ld-a"></i> Lezárva — terv alatt</span>
+      <span><i class="ld ld-b"></i> Aktuális (fizetési ablak)</span>
+      <span><i class="ld ld-r"></i> Lejárt, nincs lezárva</span>
+      <span><i class="ld ld-n"></i> Tervben (jövő)</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div id="tab-stat" style="display:none">
+    <div class="slbl">Összesített számok</div>
+    <div class="stats-grid" id="stats-cards"></div>
+    <div class="slbl">Havi megtakarítás a tervhez képest</div>
+    <div class="chart-wrap">
+      <div class="chart-leg"><span><i style="background:var(--bg4)"></i>Terv</span><span><i style="background:var(--green)"></i>Tényleges</span></div>
+      <div id="chart"></div>
+    </div>
+    <div class="slbl">Mérföldkövek</div>
+    <div id="milestones"></div>
+    <div class="slbl">Előrejelzés</div>
+    <div id="forecast" style="margin-bottom:24px"></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="tab-hist" style="display:none">
+    <div class="slbl">Havi nyilvántartás — kattints egy sorra a szerkesztéshez</div>
+    <div id="hist-list"></div>
+  </div>
+
+  <!-- CALCULATOR -->
+  <div id="tab-calc" style="display:none">
+    <div class="slbl">Átalányadós kalkulátor — TB és szocho (mellékállás)</div>
+    <div class="ibox ibox-b">Heti legalább 36 órás munkaviszony mellett végzett, átalányadózó egyéni vállalkozás becsült TB- és szocho-terheit számolja. A bevétel 55%-a számított jövedelem (45%-os általános költséghányad), ezt csökkenti az éves, göngyölített 1 936 800 Ft-os adómentes jövedelmi keret; a keret feletti részre 18,5% TB és 13% szocho (együtt 31,5%) fizetendő. SZJA-t nem számol.</div>
+    <div class="set">
+      <div id="tab-calc-body"></div>
+    </div>
+    <div class="calc-legend">
+      <span><i class="cb-i cb-i-tax"></i> TB + szocho</span>
+      <span><i class="cb-i cb-i-net"></i> Megmarad</span>
+    </div>
+    <div class="set">
+      <div class="set-title">Napi bérkövető</div>
+      <div class="frow">
+        <label class="flbl" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="d-enable" class="fcheck"> Napi bérkövetés bekapcsolva</label>
+      </div>
+      <div class="frow">
+        <label class="flbl">Havi bér cél (Ft) <small>ehhez hasonlítja a fejléc „Napi bérkövető" sávja az aktuális havi keresetet</small></label>
+        <input type="number" class="finput" id="d-target" min="0" step="10000" value="">
+      </div>
+      <div class="frow">
+        <label class="flbl" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="d-gross" class="fcheck"> Bruttó óradíj használata <small>adólevonás nélkül (8 h × óradíj)</small></label>
+      </div>
+      <div class="hint" id="d-hint"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-set" style="display:none">
+    <div class="settings">
+      <div class="set">
+        <div class="set-title">Cél</div>
+        <div class="frow">
+          <label class="flbl">Cél megnevezése</label>
+          <input type="text" class="finput" id="f-name" placeholder="pl. Önálló lakás önrésze">
+        </div>
+        <div class="frow">
+          <label class="flbl">Célösszeg (Ft)</label>
+          <input type="number" class="finput" id="f-target" min="1" step="10000">
+        </div>
+      </div>
+
+      <div class="set">
+        <div class="set-title">Havi keretek</div>
+        <div class="frow-2">
+          <div class="frow">
+            <label class="flbl">Havi jövedelem (Ft)</label>
+            <input type="number" class="finput" id="f-income" min="0" step="10000">
+          </div>
+          <div class="frow">
+            <label class="flbl">Max havi megtakarítás (Ft)</label>
+            <input type="number" class="finput" id="f-max" min="0" step="10000">
+          </div>
+        </div>
+        <div class="hint" id="f-max-hint"></div>
+      </div>
+
+      <div class="set">
+        <div class="set-title">Időkeret és kamat</div>
+        <div class="frow">
+          <label class="flbl">Kezdő hónap</label>
+          <input type="month" class="finput" id="f-start">
+        </div>
+        <div class="frow-2">
+          <div class="frow">
+            <label class="flbl">Időkeret (hónap)</label>
+            <input type="number" class="finput" id="f-months" min="1" step="1">
+          </div>
+          <div class="frow">
+            <label class="flbl">Éves kamat (%) <small>pl. DKJ, lekötött betét</small></label>
+            <input type="number" class="finput" id="f-rate" min="0" step="0.1">
+          </div>
+        </div>
+        <div class="hint" id="f-months-hint"></div>
+        <div id="f-warning"></div>
+        <div class="actions">
+          <button class="btn" onclick="saveSettings()">Mentés</button>
+          <button class="btn btn-ghost" onclick="applySuggestion()">Javaslat beállítása</button>
+          <button class="btn btn-red" onclick="resetAll()">Teljes alaphelyzet</button>
+        </div>
+      </div>
+
+      <div class="set">
+        <div class="set-title">Adatkezelés</div>
+        <div class="actions">
+          <button class="btn btn-ghost btn-mini" onclick="exportJSON()">JSON export</button>
+          <button class="btn btn-ghost btn-mini" onclick="exportCSV()">CSV export</button>
+          <button class="btn btn-ghost btn-mini" onclick="importJSON()">Import</button>
+        </div>
+        <div class="hint" style="margin-top:12px">Az appban fájlba menthető és onnan betölthető (JSON, CSV). Böngészőben vágólapra másol / onnan olvas.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">Az adataid a gépeden maradnak — <strong>a célt soha ne feledd.</strong></div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay"></div>
+
+<script>
+var LS_KEY = 'gt_state_v2';
+var MONTHS_HU = ['jan','feb','már','ápr','máj','jún','júl','aug','szept','okt','nov','dec'];
+var MONTHS_FULL = ['január','február','március','április','május','június','július','augusztus','szeptember','október','november','december'];
+var modalKey = null;
+var modalMode = 'month';
+var calView = 'month';
+var dayViewIndex = 0;
+var dayMode = 'save';
+
+/* ===== STATE ===== */
+function defaultGoal(id) {
+  var now = new Date();
+  var target = 2700000, income = 600000, max = 600000;
+  return {
+    id: id, name: 'Megtakarítási célom', target: target, monthlyIncome: income,
+    maxMonthly: max, annualRate: 0,
+    startYear: now.getFullYear(), startMonth: now.getMonth(),
+    months: Math.max(1, Math.ceil(target / max)), entries: {}
+  };
+}
+function defaultState() {
+  var g = defaultGoal('g_' + Date.now());
+  var s = {goals: {}, active: g.id, calc: defaultCalc(), daily: defaultDaily()};
+  s.goals[g.id] = g;
+  return s;
+}
+function defaultCalc() {
+  var d = new Date();
+  var y = d.getFullYear(), m = d.getMonth(), dim = daysInMonth(y, m), days = 0;
+  for (var i = 1; i <= dim; i++) { var wd = new Date(y, m, i).getDay(); if (wd !== 0 && wd !== 6) days++; }
+  days = Math.min(31, Math.max(1, days));
+  return {
+    hourly: 4800, hpd: 8, days: days,
+    costRate: 45, weekHours: 40, usedExemption: 0,
+    periodMode: 'month', showVatExemption: true, hoursOverride: null
+  };
+}
+function defaultDaily() {
+  return {enabled: true, target: 0, useGrossRate: false, days: {}};
+}
+function normalize(o) {
+  if (!o) return defaultState();
+  if (o.goals && o.active && o.goals[o.active]) {
+    Object.keys(o.goals).forEach(function (id) {
+      var g = o.goals[id];
+      g.name = cap(g.name, 120) || 'Megtakarítási célom';
+      g.target = Math.max(1, Math.floor(+g.target) || 1);
+      g.months = Math.max(1, Math.floor(+g.months) || 1);
+      g.monthlyIncome = Math.max(0, +g.monthlyIncome || 0);
+      g.maxMonthly = Math.max(0, +g.maxMonthly || 0);
+      g.annualRate = Math.max(0, +g.annualRate || 0);
+      if (!g.entries) g.entries = {};
+      Object.keys(g.entries).forEach(function (ek) {
+        var e = g.entries[ek];
+        if (e && e.note != null) e.note = cap(e.note, 500);
+      });
+      if (!g.id) g.id = id;
+      migrateDays(g);
+    });
+    ensureCalc(o);
+    ensureDaily(o);
+    return o;
+  }
+  if (o.target !== undefined) {
+    var g = defaultGoal('g_mig');
+    g.name = cap(String(o.goalName || 'Megtakarítási célom'), 120);
+    g.target = Math.max(1, Math.floor(+o.target) || 1);
+    g.monthlyIncome = Math.max(0, +o.monthlyIncome || 0);
+    g.maxMonthly = Math.max(0, +o.maxMonthly || 0);
+    g.startYear = +o.startYear || new Date().getFullYear();
+    g.startMonth = Math.min(11, Math.max(0, +o.startMonth || new Date().getMonth()));
+    g.months = Math.max(1, Math.floor(+o.months) || 5);
+    g.entries = o.entries || {};
+    g.annualRate = Math.max(0, +o.annualRate || 0);
+    migrateDays(g);
+    var s = {goals: {}, active: g.id, calc: defaultCalc(), daily: defaultDaily()};
+    s.goals[g.id] = g;
+    return s;
+  }
+  return defaultState();
+}
+function ensureDaily(o) {
+  var d = defaultDaily();
+  if (!o.daily) { o.daily = d; return; }
+  for (var k in d) if (o.daily[k] == null) o.daily[k] = d[k];
+  o.daily.enabled = !!o.daily.enabled;
+  o.daily.target = Math.max(0, +o.daily.target || 0);
+  if (!o.daily.days) o.daily.days = {};
+}
+function ensureCalc(o) {
+  var dc = defaultCalc();
+  if (!o.calc) { o.calc = dc; return; }
+  for (var k in dc) if (o.calc[k] == null) o.calc[k] = dc[k];
+  o.calc.hourly = Math.max(0, +o.calc.hourly || 0);
+  o.calc.hpd = Math.max(0, +o.calc.hpd || 0);
+  o.calc.days = Math.min(31, Math.max(1, Math.floor(+o.calc.days) || 1));
+  o.calc.costRate = Math.min(100, Math.max(0, +o.calc.costRate || 0));
+  o.calc.weekHours = Math.max(0, +o.calc.weekHours || 0);
+  o.calc.usedExemption = Math.max(0, +o.calc.usedExemption || 0);
+  o.calc.periodMode = o.calc.periodMode === 'year' ? 'year' : 'month';
+  o.calc.showVatExemption = !!o.calc.showVatExemption;
+  if (o.calc.hoursOverride == null || String(o.calc.hoursOverride) === '') o.calc.hoursOverride = null;
+  else o.calc.hoursOverride = Math.max(0, parseFloat(o.calc.hoursOverride) || 0) > 0 ? Math.max(0, parseFloat(o.calc.hoursOverride) || 0) : null;
+}
+function migrateDays(g) {
+  Object.keys(g.entries).forEach(function (ek) {
+    var e = g.entries[ek];
+    if (e && e.days) {
+      var np = ek.split('-');
+      var ey = +np[0], em = +np[1] - 1;
+      var nd = {};
+      Object.keys(e.days).forEach(function (dk) {
+        if (/^\d{1,2}$/.test(dk)) nd[key(ey, em) + '-' + pad(+dk)] = e.days[dk];
+        else nd[dk] = e.days[dk];
+      });
+      e.days = nd;
+    }
+  });
+}
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function cap(s, n) {
+  s = String(s == null ? '' : s);
+  return s.length > n ? s.slice(0, n) : s;
+}
+function csvEsc(v) {
+  var s = String(v == null ? '' : v);
+  if (/^[=+\-@]/.test(s)) s = "'" + s;
+  if (/[;"\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+var S;
+var bootDone = false;
+var hasNative = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.loadState);
+if (hasNative) {
+  S = defaultState();
+} else {
+  try {
+    S = normalize(JSON.parse(localStorage.getItem(LS_KEY) || localStorage.getItem('gt_state_v1')));
+  } catch (e) { S = defaultState(); }
+}
+
+function save() {
+  if (hasNative) {
+    if (window.webkit.messageHandlers.saveState) {
+      try { window.webkit.messageHandlers.saveState.postMessage(JSON.stringify(S)); } catch (e) {}
+    }
+    return;
+  }
+  localStorage.setItem(LS_KEY, JSON.stringify(S));
+}
+function fromB64(b64) {
+  if (typeof b64 !== 'string' || b64 === '') return null;
+  try { return JSON.parse(atob(b64)); } catch (e) { return null; }
+}
+function receiveNativeState(b64) {
+  var o = fromB64(b64);
+  if (o) { S = normalize(o); }
+  bootRender();
+}
+function receiveImport(b64) {
+  var o = fromB64(b64);
+  if (!o || !o.goals || !o.active || !o.goals[o.active]) { alert('Nem érvényes mentés-fájl.'); return; }
+  if (!confirm('Felülírja a jelenlegi adatokat a betöltött mentéssel?')) return;
+  S = normalize(o); save(); bootRender(); renderSettings();
+  setTab('cal');
+  alert('Importálva.');
+}
+
+/* ===== HELPERS ===== */
+function G() { if (!S.goals[S.active]) S.active = Object.keys(S.goals)[0] || null; return S.goals[S.active]; }
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+function key(y, m) { return y + '-' + pad(m + 1); }
+function dateNum(y, m, d) { return y * 10000 + m * 100 + d; }
+function fmt(n) { return Math.round(n).toLocaleString('hu-HU') + ' Ft'; }
+function fmtShort(n) {
+  n = Math.round(n);
+  if (n >= 1000000) return (n / 1000000).toLocaleString('hu-HU', {maximumFractionDigits: 1}) + ' M';
+  if (n >= 1000) return (n / 1000).toLocaleString('hu-HU', {maximumFractionDigits: 0}) + ' e';
+  return '' + n;
+}
+function monthFull(y, m) { return y + '. ' + MONTHS_FULL[m]; }
+function dateLabel(y, m) { return y + '.' + pad(m + 1) + '.'; }
+function partsOf(k) { var p = k.split('-'); return {y: +p[0], m: +p[1] - 1}; }
+function monthFullFor(k) { var p = partsOf(k); return monthFull(p.y, p.m); }
+function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+function planMonths() {
+  var g = G(); var arr = []; var y = g.startYear, m = g.startMonth;
+  for (var i = 0; i < g.months; i++) {
+    arr.push({i: i, key: key(y, m), year: y, month: m, plan: planAmount(i)});
+    m++; if (m > 11) { m = 0; y++; }
+  }
+  return arr;
+}
+function navMonths() {
+  var plans = planMonths();
+  var out = plans.slice();
+  if (out.length === 0) {
+    var now0 = new Date();
+    out.push({i: 0, key: key(now0.getFullYear(), now0.getMonth()), year: now0.getFullYear(), month: now0.getMonth(), plan: 0, extra: true});
+    return out;
+  }
+  var last = out[out.length - 1];
+  var now = new Date();
+  var cy = now.getFullYear(), cm = now.getMonth();
+  var guard = 0;
+  while (out.length < 24 || last.year < cy || (last.year === cy && last.month < cm)) {
+    var m = last.month + 1, y = last.year;
+    if (m > 11) { m = 0; y++; }
+    out.push({i: -1, key: key(y, m), year: y, month: m, plan: 0, extra: true});
+    last = out[out.length - 1];
+    if (++guard > 400) break;
+  }
+  return out;
+}
+function planAmount(i) {
+  var g = G(); var base = Math.ceil(g.target / g.months);
+  if (i < g.months - 1) return base;
+  return g.target - base * (g.months - 1);
+}
+function planFor(k) {
+  var plans = planMonths();
+  for (var i = 0; i < plans.length; i++) if (plans[i].key === k) return {plan: planAmount(i), i: i};
+  return {plan: 0, i: -1};
+}
+function incomeOf(e) { return (e && e.income != null) ? e.income : (G().monthlyIncome || 0); }
+function pocketAllowance(e) {
+  var inc = incomeOf(e); var sav = e ? (e.saved || 0) : 0; var exp = e ? (e.expense || 0) : 0;
+  return Math.max(0, inc - sav - exp);
+}
+function pocketLeftover(e) {
+  if (!e || e.pocketSpent == null) return 0;
+  return Math.max(0, pocketAllowance(e) - e.pocketSpent);
+}
+function toGoal(e) { return (e ? (e.saved || 0) : 0) + pocketLeftover(e); }
+function totalSaved() { var t = 0; for (var k in G().entries) t += toGoal(G().entries[k]); return t; }
+function closedCount() {
+  var plans = planMonths(); var keys = {};
+  plans.forEach(function (p) { keys[p.key] = true; });
+  var c = 0;
+  for (var k in G().entries) if (keys[k]) c++;
+  return c;
+}
+function savingsRate(e) {
+  var inc = incomeOf(e); if (inc <= 0) return null;
+  return Math.round((e ? (e.saved || 0) : 0) / inc * 100);
+}
+function monthStatus(p) {
+  var e = G().entries[p.key];
+  if (e) return e.saved >= p.plan ? 'done' : 'short';
+  var now = new Date();
+  var nowNum = dateNum(now.getFullYear(), now.getMonth(), now.getDate());
+  var pm = payMonth(p);
+  var endNum = dateNum(pm.year, pm.month, 10);
+  if (nowNum > endNum) return 'missed';
+  var startNum = dateNum(p.year, p.month, 1);
+  var lastNum = dateNum(p.year, p.month, 31);
+  if (nowNum >= startNum && nowNum <= lastNum) return 'now';
+  var graceStart = dateNum(pm.year, pm.month, 1);
+  var graceEnd = dateNum(pm.year, pm.month, 10);
+  if (nowNum >= graceStart && nowNum <= graceEnd) return 'now';
+  return 'future';
+}
+function isElapsed(p) {
+  var now = new Date();
+  var nowNum = dateNum(now.getFullYear(), now.getMonth(), now.getDate());
+  return nowNum >= dateNum(p.year, p.month, 1);
+}
+function payMonth(p) {
+  var ey = p.year, em = p.month + 1;
+  if (em > 11) { em = 0; ey++; }
+  return {year: ey, month: em};
+}
+function dailySpan(p) {
+  var days = [];
+  var dim = daysInMonth(p.year, p.month);
+  for (var d = 1; d <= dim; d++) days.push({y: p.year, m: p.month, d: d});
+  return days;
+}
+function dayFullKey(y, m, d) { return key(y, m) + '-' + pad(d); }
+function defaultDayIndex() {
+  var plans = navMonths();
+  var now = new Date();
+  var cy = now.getFullYear(), cm = now.getMonth();
+  for (var i = 0; i < plans.length; i++) if (plans[i].year === cy && plans[i].month === cm) return i;
+  for (var i = 0; i < plans.length; i++) if (monthStatus(plans[i]) === 'now') return i;
+  return 0;
+}
+function statusLabel(st) {
+  return {done:'Teljesítve', short:'Terv alatt', missed:'Lejárt — lezáratlan', now:'Aktuális hónap', future:'Tervben'}[st];
+}
+function streak() {
+  var plans = planMonths(); var idx = -1;
+  for (var i = plans.length - 1; i >= 0; i--) if (isElapsed(plans[i])) { idx = i; break; }
+  if (idx < 0) return 0;
+  var c = 0;
+  for (var j = idx; j >= 0; j--) {
+    var e = G().entries[plans[j].key];
+    if (e && toGoal(e) >= plans[j].plan) c++; else break;
+  }
+  return c;
+}
+function milestones() {
+  var th = [25, 50, 75, 100]; var out = []; var cum = 0; var ti = 0;
+  var plans = planMonths();
+  for (var i = 0; i < plans.length; i++) {
+    var e = G().entries[plans[i].key];
+    if (e) cum += toGoal(e);
+    while (ti < th.length && cum >= G().target * th[ti] / 100) {
+      out.push({pct: th[ti], key: plans[i].key, month: monthFull(plans[i].year, plans[i].month), cum: cum});
+      ti++;
+    }
+  }
+  return out;
+}
+function aheadBehind() {
+  var plans = planMonths(); var plannedCum = 0;
+  for (var i = 0; i < plans.length; i++) if (isElapsed(plans[i])) plannedCum += planAmount(i);
+  return totalSaved() - plannedCum;
+}
+function interestProjection() {
+  var g = G(); var r = g.annualRate / 100 / 12; var bal = 0, dep = 0;
+  var plans = planMonths();
+  for (var i = 0; i < plans.length; i++) {
+    var e = g.entries[plans[i].key];
+    var d = e ? toGoal(e) : planAmount(i);
+    bal += d; dep += d; bal *= (1 + r);
+  }
+  return {dep: dep, interest: bal - dep, total: bal};
+}
+function planEndDate() {
+  var plans = planMonths(); var last = plans[plans.length - 1];
+  var d = new Date(last.year, last.month + 1, 0);
+  return dateLabel(d.getFullYear(), d.getMonth());
+}
+function currentPaceDate() {
+  var closed = 0, sum = 0;
+  for (var k in G().entries) { sum += toGoal(G().entries[k]); closed++; }
+  if (closed === 0 || sum <= 0) return null;
+  var avg = sum / closed;
+  var rem = Math.max(0, G().target - sum);
+  var remMonths = Math.ceil(rem / avg);
+  var d = new Date();
+  var pace = new Date(d.getFullYear(), d.getMonth() + remMonths, 1);
+  return dateLabel(pace.getFullYear(), pace.getMonth());
+}
+function notifyNative(title, body) {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.notify) {
+    try { window.webkit.messageHandlers.notify.postMessage({title: title, body: body}); } catch (e) {}
+  }
+}
+function copyText(txt, okMsg) {
+  var done = function () { if (okMsg) alert(okMsg); };
+  function fallback() {
+    var ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta); done();
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(done, fallback);
+  } else fallback();
+}
+
+/* ===== ÁTALÁNYADÓS TB/SZOCHO KALKULÁTOR ===== */
+var FLAT = {
+  TB: 0.185,
+  SZOCHO: 0.13,
+  BURDEN: 0.315,
+  EXEMPTION: 1936800,
+  WEEK_MIN: 36,
+  VAT_EXEMPTION: 12000000,
+  DEFAULT_HOURLY: 4800,
+  DEFAULT_HPD: 8,
+  DEFAULT_COST: 45
+};
+function money(x) { return Math.round(x); }
+function flatCalc(c, n, yearOverride) {
+  var hourly = Math.max(0, +c.hourly || 0);
+  var hpd = Math.max(0, +c.hpd || 0);
+  var days = n == null ? Math.min(31, Math.max(1, Math.floor(+c.days || 0))) : Math.min(31, Math.max(0, Math.floor(+n || 0)));
+  var costRate = Math.min(100, Math.max(0, +c.costRate || 0));
+  var usedEx = Math.max(0, +c.usedExemption || 0);
+  var weekHours = Math.max(0, +c.weekHours || 0);
+  var yearMode = yearOverride != null ? !!yearOverride : (c.periodMode === 'year');
+  var mult = yearMode ? 12 : 1;
+  var hoursOverride = (n == null && c.hoursOverride != null && String(c.hoursOverride) !== '' && +c.hoursOverride > 0) ? +c.hoursOverride : null;
+
+  var dailyRevenue = money(hourly * hpd);
+  var dailyComputed = money(dailyRevenue * (100 - costRate) / 100);
+  var hours = hoursOverride != null ? hoursOverride : (hpd * days);
+  var revenue = money(hourly * hours * mult);
+  var computedIncome = money(revenue * (100 - costRate) / 100);
+  var availableExemption = Math.max(0, FLAT.EXEMPTION - usedEx);
+  var usedExemption = Math.min(computedIncome, availableExemption);
+  var taxableIncome = Math.max(0, computedIncome - availableExemption);
+  var tb = money(taxableIncome * FLAT.TB);
+  var szocho = money(taxableIncome * FLAT.SZOCHO);
+  var burden = tb + szocho;
+  var remaining = revenue - burden;
+  var effHours = hours * mult;
+  var effHourly = effHours > 0 ? money(remaining / effHours) : 0;
+  return {
+    hourly: hourly, hpd: hpd, days: days, weekHours: weekHours, costRate: costRate,
+    yearMode: yearMode, mult: mult, hoursOverride: hoursOverride,
+    dailyRevenue: dailyRevenue, dailyComputed: dailyComputed,
+    hours: hours, revenue: revenue,
+    computedIncome: computedIncome, availableExemption: availableExemption,
+    usedExemption: usedExemption, exemptionLeft: availableExemption - usedExemption,
+    taxableIncome: taxableIncome, tb: tb, szocho: szocho, burden: burden,
+    remaining: remaining, effHourly: effHourly
+  };
+}
+function flatCalcWarnings(c, r, opts) {
+  opts = opts || {};
+  var w = {week: false, zero: false, cost: false, exhausted: false, disclaim: true};
+  if (r.weekHours < FLAT.WEEK_MIN) w.week = true;
+  if (r.hourly <= 0 || r.hpd <= 0 || r.days <= 0) w.zero = true;
+  if (opts.costEmpty || c.costRate == null || String(c.costRate) === '' || isNaN(+c.costRate)) w.cost = true;
+  if (r.availableExemption <= 0) w.exhausted = true;
+  return w;
+}
+function flatDayRows(c) {
+  var rows = [];
+  for (var n = 1; n <= 31; n++) {
+    var r = flatCalc(c, n);
+    rows.push({
+      n: n, hours: n * r.hpd,
+      revenue: r.revenue, computed: r.computedIncome,
+      usedEx: r.usedExemption, taxable: r.taxableIncome,
+      tb: r.tb, szocho: r.szocho, burden: r.burden, remaining: r.remaining
+    });
+  }
+  return rows;
+}
+function flatYearRows(c) {
+  var base = flatCalc(c, null, false);
+  var monthlyRevenue = base.revenue;
+  var monthlyComputed = base.computedIncome;
+  var avail = base.availableExemption;
+  var rows = [];
+  var prevTaxable = 0, prevUsed = 0, cumBurden = 0;
+  for (var m = 1; m <= 12; m++) {
+    var cum = m * monthlyComputed;
+    var used = Math.min(cum, avail);
+    var taxableCum = Math.max(0, cum - avail);
+    var monthTaxable = taxableCum - prevTaxable;
+    var monthUsed = used - prevUsed;
+    var tb = money(monthTaxable * FLAT.TB);
+    var szocho = money(monthTaxable * FLAT.SZOCHO);
+    var burden = tb + szocho;
+    cumBurden += burden;
+    rows.push({
+      m: m, revenue: monthlyRevenue, computed: monthlyComputed,
+      usedEx: monthUsed, taxable: monthTaxable, tb: tb, szocho: szocho,
+      burden: burden, remaining: monthlyRevenue - burden,
+      cumBurden: cumBurden, cumRemaining: m * monthlyRevenue - cumBurden
+    });
+    prevTaxable = taxableCum; prevUsed = used;
+  }
+  return rows;
+}
+function flatTableHTML(c, rows) {
+  var yearMode = c.periodMode === 'year';
+  var unit = yearMode ? 'éves' : 'havi';
+  var html = '<div class="frow"><label class="flbl">Napi bontás (göngyölítve, ' + unit + ' szinten) — 1–31 munkanap</label>' +
+    '<div class="dtable-wrap"><table class="dtable">' +
+    '<thead><tr>' +
+    '<th>Nap</th><th>Óra</th><th>Bevétel</th><th>Számított jöv.</th><th>Felh. keret</th>' +
+    '<th>Adóköteles</th><th>TB 18,5%</th><th>Szocho 13%</th><th>TB+Szocho</th><th>Bevétel − TB és szocho</th>' +
+    '</tr></thead><tbody>';
+  rows.forEach(function (r) {
+    html += '<tr>' +
+      '<td class="dn">' + r.n + '</td>' +
+      '<td>' + r.hours + ' h</td>' +
+      '<td>' + fmt(r.revenue) + '</td>' +
+      '<td>' + fmt(r.computed) + '</td>' +
+      '<td>' + fmt(r.usedEx) + '</td>' +
+      '<td>' + fmt(r.taxable) + '</td>' +
+      '<td class="dneg">' + fmt(r.tb) + '</td>' +
+      '<td class="dneg">' + fmt(r.szocho) + '</td>' +
+      '<td class="dneg">' + fmt(r.burden) + '</td>' +
+      '<td class="drem">' + fmt(r.remaining) + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+function flatYearTableHTML(c, rows) {
+  var html = '<div class="frow"><label class="flbl">Éves göngyölítés — hónaponként (' + c.days + ' munkanap/hó feltételezéssel)</label>' +
+    '<div class="dtable-wrap"><table class="dtable">' +
+    '<thead><tr>' +
+    '<th>Hónap</th><th>Havi bevétel</th><th>Számított jöv.</th><th>Felh. keret</th>' +
+    '<th>Adóköteles</th><th>TB 18,5%</th><th>Szocho 13%</th><th>TB+Szocho</th><th>Megmarad</th>' +
+    '</tr></thead><tbody>';
+  rows.forEach(function (r) {
+    html += '<tr>' +
+      '<td class="dn">' + r.m + '.</td>' +
+      '<td>' + fmt(r.revenue) + '</td>' +
+      '<td>' + fmt(r.computed) + '</td>' +
+      '<td>' + fmt(r.usedEx) + '</td>' +
+      '<td>' + fmt(r.taxable) + '</td>' +
+      '<td class="dneg">' + fmt(r.tb) + '</td>' +
+      '<td class="dneg">' + fmt(r.szocho) + '</td>' +
+      '<td class="dneg">' + fmt(r.burden) + '</td>' +
+      '<td class="drem">' + fmt(r.remaining) + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+  return html;
+}
+function flatWarningsHTML(w) {
+  var parts = [];
+  if (w.week) parts.push('<div class="ibox ibox-a" style="margin-bottom:10px">Figyelem: a heti munkaviszony óraszáma 36 óra alatt van (' + fmt((S.calc || {}).weekHours || 0) + ' h). Ilyenkor nem mellékállású foglalkoztatásról van szó — a számítás nem érvényes mellékállású átalányadózóként.</div>');
+  if (w.zero) parts.push('<div class="ibox ibox-r" style="margin-bottom:10px">Figyelem: az óradíj vagy a munkaórák száma nulla vagy negatív — adj meg érvényes értéket.</div>');
+  if (w.cost) parts.push('<div class="ibox ibox-a" style="margin-bottom:10px">Figyelem: a költséghányad nincs megadva.</div>');
+  if (w.exhausted) parts.push('<div class="ibox ibox-a" style="margin-bottom:10px">Az éves adómentes jövedelmi keret elfogyott — a teljes számított jövedelem után TB-t és szochót kell fizetni.</div>');
+  parts.push('<div class="ibox ibox-b" style="margin-bottom:10px">A kalkulátor csak a TB-járulékot (18,5%) és a szociális hozzájárulási adót (13%) becsli, <b>nem tartalmazza</b> az SZJA-t, a helyi iparűzési adót, a könyvelési díjat, a kamarai hozzájárulást és az egyéb költségeket. Az alanyi adómentesség csak az áfát érinti, a TB- és szocho-számítást nem befolyásolja.</div>');
+  return parts.join('');
+}
+function calcResultsHTML(r, c, w) {
+  var g = G();
+  var periodLabel = r.yearMode ? 'Éves' : 'Havi';
+  var other = flatCalc(c, null, !r.yearMode);
+  var otherLabel = r.yearMode ? 'Havi' : 'Éves';
+  var rows =
+    '<div class="m-row"><span class="mr-l">Napi bevétel</span><span class="mr-v">' + fmt(r.dailyRevenue) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">Napi számított jövedelem (' + r.costRate + '% költséghányad)</span><span class="mr-v">' + fmt(r.dailyComputed) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">' + periodLabel + ' bevétel</span><span class="mr-v">' + fmt(r.revenue) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">Számított jövedelem (' + periodLabel.toLowerCase() + ')</span><span class="mr-v">' + fmt(r.computedIncome) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">Adómentes keretből fennmaradó</span><span class="mr-v ' + (r.availableExemption <= 0 ? 'cr' : 'cg') + '">' + fmt(r.availableExemption) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">Felhasznált adómentes keret (' + periodLabel.toLowerCase() + ')</span><span class="mr-v">' + fmt(r.usedExemption) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">Adóköteles jövedelem</span><span class="mr-v">' + fmt(r.taxableIncome) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">TB-járulék (18,5%)</span><span class="mr-v cr">− ' + fmt(r.tb) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">Szociális hozzájárulási adó (13%)</span><span class="mr-v cr">− ' + fmt(r.szocho) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">TB + szocho összesen</span><span class="mr-v cr">− ' + fmt(r.burden) + '</span></div>' +
+    '<div class="m-row" style="background:var(--green-dim);border:1px solid var(--green-b)"><span class="mr-l">' + periodLabel + ' bevétel mínusz TB és szocho</span><span class="mr-v cg">' + fmt(r.remaining) + '</span></div>';
+  if (c.showVatExemption) {
+    rows += '<div class="m-row"><span class="mr-l">Alanyi adómentességi keret (tájékoztató)</span><span class="mr-v">' + fmt(FLAT.VAT_EXEMPTION) + '</span></div>';
+  }
+  rows += '<div class="calc-note" style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px"><b>' + otherLabel + ' vetítés</b> (12 hasonló hónap):</div>' +
+    '<div class="m-row"><span class="mr-l">' + otherLabel + ' bevétel</span><span class="mr-v">' + fmt(other.revenue) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">TB-járulék (18,5%)</span><span class="mr-v cr">− ' + fmt(other.tb) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">Szocho (13%)</span><span class="mr-v cr">− ' + fmt(other.szocho) + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">TB + szocho összesen</span><span class="mr-v cr">− ' + fmt(other.burden) + '</span></div>' +
+    '<div class="m-row" style="background:var(--green-dim);border:1px solid var(--green-b)"><span class="mr-l">' + otherLabel + ' megmaradás</span><span class="mr-v cg">' + fmt(other.remaining) + '</span></div>';
+  if (!r.yearMode && r.burden === 0 && r.availableExemption > 0) {
+    var daysLeft = r.dailyComputed > 0 ? Math.ceil(r.availableExemption / r.dailyComputed) : 0;
+    var monthsLeft = daysLeft > 0 && r.days > 0 ? (daysLeft / r.days) : 0;
+    rows += '<div class="ibox ibox-g" style="margin-top:10px">Ebben a hónapban <b>0 Ft a TB és a szocho</b>, mert az éves adómentes jövedelmi keret (1 936 800 Ft) még fedezi a számított jövedelmet. A keret nagyjából <b>' + daysLeft + ' munkanap</b> (~' + (monthsLeft > 0 ? Math.round(monthsLeft * 10) / 10 : 0) + ' hónap) után merül ki; utána a keret feletti részre 18,5% TB + 13% szocho (31,5%) fizetendő. A „' + otherLabel + ' vetítés" blokk mutatja a teljes éves terhet.</div>';
+  }
+  rows += '<div class="calc-note">Effektív óradíj: <b>' + fmt(r.effHourly) + '</b>/h · Ledolgozott óra: <b>' + r.hours + ' h</b> · Napi bontás: <b>' + (r.days || 0) + ' munkanap × ' + r.hpd + ' h</b>.</div>';
+  if (r.hoursOverride != null) {
+    rows += '<div class="calc-note">A fő eredmény a megadott <b>' + r.hours + ' h</b> ledolgozott órából számolódik (' + fmt(r.hourly) + ' Ft/h). Az alábbi napi bontás a munkanapok × napi órák alapján tájékoztató jellegű.</div>';
+  }
+  rows += '<div class="calc-note">A számítás <b class="cr">nem tartalmazza az SZJA-t</b>. ' + periodLabel + ' mód · TB+szocho együttes kulcs: 31,5%.</div>';
+  if (g && g.maxMonthly > 0) {
+    rows += '<div class="calc-note">A célhoz a max havi megtakarításod ' + fmt(g.maxMonthly) + ' — a megmaradásból legfeljebb ' + fmt(Math.min(g.maxMonthly, r.remaining)) + ' rakható félre.</div>';
+  }
+  rows += '<div class="calc-note" id="warnslot"></div>';
+  return rows;
+}
+function flatTablesHTML(c) {
+  var dayRows = flatDayRows(c);
+  var r = flatCalc(c);
+  var dayNote = '';
+  if (!r.yearMode) {
+    var allZero = dayRows.every(function (x) { return x.taxable === 0; });
+    if (allZero) {
+      dayNote = '<div class="ibox ibox-b" style="margin-top:12px">A napi bontásban minden sorban <b>0 Ft a TB és a szocho</b>, mert az éves adómentes keret (1 936 800 Ft) egyetlen hónap számított jövedelmét (max. 654 720 Ft 31 napnál) teljesen fedezi — a keret ~92 munkanap után fogy el. Az alábbi „Éves göngyölítés" táblázat mutatja, melyik hónaptól és mennyi a fizetendő teher. Ha már ledolgoztál hónapokat, írd a „Korábban felhasznált éves adómentes keret" mezőbe a felhasznált részt — így itt is megjelenik a TB és a szocho.</div>';
+    }
+  }
+  return flatTableHTML(c, dayRows) + dayNote + (!r.yearMode ? flatYearTableHTML(c, flatYearRows(c)) : '');
+}
+function calcPanelHTML(prefix) {
+  prefix = prefix || 'ct';
+  var c = S.calc || defaultCalc();
+  var r = flatCalc(c);
+  var w = flatCalcWarnings(c, r, {costEmpty: c.costRate == null || String(c.costRate) === ''});
+  var maxPart = Math.max(r.revenue, 1);
+  var wBurden = Math.max(0, Math.min(100, r.burden / maxPart * 100));
+  var wNet = Math.max(0, Math.min(100, Math.max(0, r.remaining) / maxPart * 100));
+  var qc = '';
+  for (var q = 5; q <= 22; q++) {
+    qc += '<button type="button" class="qc-btn' + (c.days === q && (c.hoursOverride == null) ? ' active' : '') + '" data-qc="' + q + '">' + q + '</button>';
+  }
+  var html = '' +
+    '<div class="frow-2">' +
+    '<div class="frow"><label class="flbl">Óradíj (Ft/h)</label><input type="number" class="finput" id="' + prefix + '-hourly" min="0" step="100" value="' + (c.hourly || '') + '"></div>' +
+    '<div class="frow"><label class="flbl">Napi munkaórák (h)</label><input type="number" class="finput" id="' + prefix + '-hpd" min="0" step="0.5" value="' + (c.hpd || '') + '"></div>' +
+    '</div>' +
+    '<div class="frow"><label class="flbl">Munkanapok száma (1–31)</label><input type="number" class="finput" id="' + prefix + '-days" min="1" max="31" step="1" value="' + (c.days || '') + '"><div class="qc" id="' + prefix + '-qc">' + qc + '</div></div>' +
+    '<div class="frow-2">' +
+    '<div class="frow"><label class="flbl">Heti munkaviszony óraszáma (h)</label><input type="number" class="finput" id="' + prefix + '-weekhours" min="0" step="1" value="' + (c.weekHours || '') + '"></div>' +
+    '<div class="frow"><label class="flbl">Költséghányad (%)</label><input type="number" class="finput" id="' + prefix + '-costrate" min="0" max="100" step="1" value="' + (c.costRate || '') + '"></div>' +
+    '</div>' +
+    '<div class="frow-2">' +
+    '<div class="frow"><label class="flbl">Korábban felhasznált éves adómentes keret (Ft)</label><input type="number" class="finput" id="' + prefix + '-usedex" min="0" step="1000" value="' + (c.usedExemption || '') + '"></div>' +
+    '<div class="frow"><label class="flbl">Ledolgozott óra összesen (h)</label><input type="number" class="finput" id="' + prefix + '-hours" min="0" step="0.5" value="' + (c.hoursOverride && +c.hoursOverride > 0 ? c.hoursOverride : (c.hpd * c.days)) + '"></div>' +
+    '</div>' +
+    '<div class="frow-2">' +
+    '<div class="frow"><label class="flbl">Számítási mód</label>' +
+    '<select class="finput" id="' + prefix + '-period">' +
+    '<option value="month"' + (c.periodMode !== 'year' ? ' selected' : '') + '>Havi</option>' +
+    '<option value="year"' + (c.periodMode === 'year' ? ' selected' : '') + '>Éves</option>' +
+    '</select></div>' +
+    '<div class="frow"><label class="flbl" style="display:flex;align-items:center;gap:8px"><input type="checkbox" class="fcheck" id="' + prefix + '-vatex"' + (c.showVatExemption ? ' checked' : '') + '> Alanyi adómentességi keret mutatása <small>csak tájékoztató adat — a TB/szocho-számítást nem befolyásolja</small></label></div>' +
+    '</div>' +
+    '<div id="' + prefix + '-warn">' + flatWarningsHTML(w) + '</div>' +
+    '<div class="calc-res" id="' + prefix + '-res">' + calcResultsHTML(r, c, w) + '</div>' +
+    '<div class="calc-bar">' +
+    '<div class="cb cb-tax" id="' + prefix + '-bar-tax" style="width:' + wBurden + '%" title="TB+szocho"></div>' +
+    '<div class="cb cb-net" id="' + prefix + '-bar-net" style="width:' + wNet + '%" title="megmarad"></div>' +
+    '</div>';
+  return html + '<div id="' + prefix + '-tables">' + flatTablesHTML(c) + '</div>';
+}
+function wireCalc(prefix) {
+  prefix = prefix || 'ct';
+  ['hourly', 'days', 'hpd', 'weekhours', 'costrate', 'usedex', 'hours'].forEach(function (id) {
+    var el = document.getElementById(prefix + '-' + id);
+    if (el) el.addEventListener('input', function () { updateCalc(prefix, id); });
+  });
+  var pm = document.getElementById(prefix + '-period');
+  if (pm) pm.addEventListener('change', function () { updateCalc(prefix); });
+  var vx = document.getElementById(prefix + '-vatex');
+  if (vx) vx.addEventListener('change', function () { updateCalc(prefix); });
+  var qc = document.getElementById(prefix + '-qc');
+  if (qc) {
+    Array.prototype.forEach.call(qc.querySelectorAll('.qc-btn'), function (b) {
+      b.addEventListener('click', function () {
+        var d = parseInt(b.getAttribute('data-qc'), 10);
+        var c = S.calc = S.calc || defaultCalc();
+        c.days = d; c.hoursOverride = null;
+        var dayEl = document.getElementById(prefix + '-days');
+        if (dayEl) dayEl.value = d;
+        updateCalc(prefix);
+      });
+    });
+  }
+  updateCalc(prefix);
+}
+function updateCalc(prefix, fromId) {
+  prefix = prefix || 'ct';
+  function val(id) {
+    var el = document.getElementById(prefix + '-' + id);
+    return el ? el.value : '';
+  }
+  var c = S.calc = S.calc || defaultCalc();
+  c.hourly = Math.max(0, parseFloat(val('hourly')) || 0);
+  c.days = Math.min(31, Math.max(1, parseInt(val('days'), 10) || 0));
+  c.hpd = Math.max(0, parseFloat(val('hpd')) || 0);
+  c.weekHours = Math.max(0, parseFloat(val('weekhours')) || 0);
+  c.costRate = Math.min(100, Math.max(0, parseFloat(val('costrate')) || 0));
+  c.usedExemption = Math.max(0, parseFloat(val('usedex')) || 0);
+  var hoursRaw = val('hours');
+  if (fromId === 'hours') {
+    c.hoursOverride = hoursRaw === '' || parseFloat(hoursRaw) <= 0 ? null : parseFloat(hoursRaw);
+  } else if (fromId === 'days' || fromId === 'hpd') {
+    c.hoursOverride = null;
+  }
+  c.periodMode = val('period') === 'year' ? 'year' : 'month';
+  c.showVatExemption = !!document.getElementById(prefix + '-vatex') ? document.getElementById(prefix + '-vatex').checked : true;
+  var hoursEl = document.getElementById(prefix + '-hours');
+  if (hoursEl && fromId !== 'hours' && c.hoursOverride == null) {
+    hoursEl.value = Math.round(c.hpd * c.days * 10) / 10;
+  }
+  var r = flatCalc(c);
+  var w = flatCalcWarnings(c, r, {costEmpty: val('costrate') === ''});
+  var warnEl = document.getElementById(prefix + '-warn');
+  if (warnEl) warnEl.innerHTML = flatWarningsHTML(w);
+  var resEl = document.getElementById(prefix + '-res');
+  if (resEl) resEl.innerHTML = calcResultsHTML(r, c, w);
+  var tablesEl = document.getElementById(prefix + '-tables');
+  if (tablesEl) tablesEl.innerHTML = flatTablesHTML(c);
+  var qc = document.getElementById(prefix + '-qc');
+  if (qc) {
+    Array.prototype.forEach.call(qc.querySelectorAll('.qc-btn'), function (b) {
+      b.classList.toggle('active', parseInt(b.getAttribute('data-qc'), 10) === c.days && c.hoursOverride == null);
+    });
+  }
+  var maxPart = Math.max(r.revenue, 1);
+  var setBar = function (id, ww) {
+    var el = document.getElementById(id);
+    if (el) el.style.width = ww + '%';
+  };
+  setBar(prefix + '-bar-tax', Math.max(0, Math.min(100, r.burden / maxPart * 100)));
+  setBar(prefix + '-bar-net', Math.max(0, Math.min(100, Math.max(0, r.remaining) / maxPart * 100)));
+  save();
+  renderDailyTracker();
+  updateDailyHint();
+}
+function calcApply() {
+  if (!modalKey) return;
+  var c = S.calc || defaultCalc();
+  var r = flatCalc(c, null, false);
+  openModal(modalKey, 'month');
+  var inc = document.getElementById('m-inc');
+  if (inc) { inc.value = Math.round(r.remaining); updateMsum(); }
+}
+function renderCalc() {
+  var el = document.getElementById('tab-calc-body');
+  if (!el) return;
+  el.innerHTML = calcPanelHTML('ct');
+  wireCalc('ct');
+  renderDailySettings();
+  var en = document.getElementById('d-enable');
+  if (en) en.addEventListener('change', function () {
+    S.daily = S.daily || defaultDaily();
+    S.daily.enabled = en.checked;
+    save(); renderDailyTracker();
+  });
+  var tg = document.getElementById('d-target');
+  if (tg) tg.addEventListener('input', function () {
+    S.daily = S.daily || defaultDaily();
+    S.daily.target = Math.max(0, parseFloat(tg.value) || 0);
+    save(); renderDailyTracker();
+  });
+  var gr = document.getElementById('d-gross');
+  if (gr) gr.addEventListener('change', function () {
+    S.daily = S.daily || defaultDaily();
+    S.daily.useGrossRate = gr.checked;
+    save(); renderDailyTracker(); updateDailyHint();
+  });
+}
+
+/* ===== GOALS ===== */
+function renderGoalSwitcher() {
+  var sel = document.getElementById('goal-switch');
+  sel.innerHTML = '';
+  Object.keys(S.goals).forEach(function (id) {
+    var o = document.createElement('option');
+    o.value = id; o.textContent = S.goals[id].name;
+    sel.appendChild(o);
+  });
+  sel.value = S.active;
+  sel.onchange = function () { S.active = sel.value; save(); renderAll(); };
+}
+function addGoal() {
+  var n = Object.keys(S.goals).length + 1;
+  var g = defaultGoal('g_' + Date.now());
+  g.name = 'Cél ' + n;
+  S.goals[g.id] = g; S.active = g.id;
+  save(); renderAll(); renderGoalSwitcher(); renderSettings(); setTab('set');
+}
+function deleteGoal() {
+  var g = G(); if (!g) return;
+  if (!confirm('Törlöd a „' + g.name + '" célt és az összes bejegyzését?')) return;
+  delete S.goals[g.id];
+  var keys = Object.keys(S.goals);
+  if (keys.length === 0) { S = defaultState(); }
+  else S.active = keys[0];
+  save(); renderAll(); renderGoalSwitcher(); renderSettings();
+}
+
+/* ===== HEADER / METRICS / PROGRESS ===== */
+function renderHeader() {
+  var g = G();
+  document.getElementById('hdr-title').innerHTML = 'A te utad a <em>' + fmt(g.target) + '</em>-hoz';
+  var parts = [g.name, fmt(g.target) + ' cél', g.months + ' hónap', fmt(g.maxMonthly) + ' max havi megtakarítás'];
+  if (g.annualRate > 0) parts.push(g.annualRate + '% éves kamat');
+  document.getElementById('hdr-sub').textContent = parts.join(' · ');
+}
+function renderMetrics() {
+  var g = G();
+  document.getElementById('m-target').textContent = fmt(g.target);
+  document.getElementById('m-plan').textContent = fmt(Math.ceil(g.target / g.months));
+  var saved = totalSaved();
+  var msv = document.getElementById('m-saved');
+  msv.textContent = fmt(saved);
+  msv.className = 'metric-val ' + (saved >= g.target ? 'cg' : saved >= g.target * 0.7 ? 'cb' : '');
+  var rates = [];
+  for (var k in g.entries) { var r = savingsRate(g.entries[k]); if (r != null) rates.push(r); }
+  var avgRate = rates.length ? Math.round(rates.reduce(function (a, b) { return a + b; }, 0) / rates.length) : null;
+  document.getElementById('m-saved-sub').textContent = closedCount() + ' hónap lezárva' + (avgRate != null ? ' · átlag ráta ' + avgRate + '%' : '');
+  var left = Math.max(0, g.target - saved);
+  var ml = document.getElementById('m-left');
+  ml.textContent = fmt(left);
+  ml.className = 'metric-val ' + (left === 0 ? 'cg' : 'ca');
+  document.getElementById('m-months').textContent = g.months + ' hó';
+}
+function renderProgress() {
+  var g = G(); var saved = totalSaved();
+  var pct = Math.min(100, Math.round((saved / g.target) * 100));
+  document.getElementById('ov-prog').style.width = pct + '%';
+  document.getElementById('ov-val').textContent = fmt(saved) + ' · ' + pct + '%';
+  document.getElementById('ov-mo').textContent = closedCount() + ' / ' + g.months + ' hónap lezárva';
+
+  var st = streak();
+  var sb = document.getElementById('ov-streak');
+  if (st > 0) { sb.style.display = ''; sb.textContent = '' + st + ' hónapos streak'; }
+  else sb.style.display = 'none';
+
+  var pace = currentPaceDate();
+  var ab = aheadBehind();
+  var bits = ['Cél a terv szerint: <b>' + planEndDate() + '</b>'];
+  if (pace) bits.push('jelenlegi tempóval: <b>' + pace + '</b>');
+  if (ab >= 0) bits.push('+<b>' + fmt(ab) + '</b> a tervhez képest (előrébb)');
+  else bits.push('<b>' + fmt(Math.abs(ab)) + '</b> lemaradás');
+  var projEl = document.getElementById('ov-proj');
+  projEl.className = 'ovprog-proj ' + (ab < 0 ? 'warn' : '');
+  projEl.innerHTML = bits.join(' · ');
+
+  if (g.annualRate > 0) {
+    var ip = interestProjection();
+    projEl.innerHTML += ' · Becsült kamathozam: <b>' + fmt(ip.interest) + '</b>, végösszeg ' + fmt(ip.total);
+  }
+  renderDailyTracker();
+}
+
+/* ===== CALENDAR ===== */
+function setCalView(v) {
+  calView = v;
+  document.getElementById('cv-month').classList.toggle('active', v === 'month');
+  document.getElementById('cv-day').classList.toggle('active', v === 'day');
+  document.getElementById('years').style.display = v === 'month' ? '' : 'none';
+  document.getElementById('day-view').style.display = v === 'day' ? '' : 'none';
+  document.getElementById('cal-summary').style.display = v === 'month' ? '' : 'none';
+  if (v === 'day') renderDailyView();
+  else renderCalendar();
+}
+function renderCalendar() {
+  if (calView === 'day') { renderDailyView(); return; }
+  var plans = planMonths(); var map = {};
+  plans.forEach(function (p) { map[p.key] = p; });
+  var summary = document.getElementById('cal-summary');
+  summary.style.display = '';
+  summary.innerHTML = '';
+  var plannedElapsed = 0;
+  plans.forEach(function (p) { if (isElapsed(p)) plannedElapsed += p.plan; });
+  var actual = totalSaved(); var diff = actual - plannedElapsed;
+  var items = [
+    {l: 'Terv szerint eddig', v: fmt(plannedElapsed), c: 'cg'},
+    {l: 'Ténylegesen félretett', v: fmt(actual), c: actual >= plannedElapsed ? 'cg' : 'ca'},
+    {l: 'Eltérés', v: (diff >= 0 ? '+' : '') + fmt(diff), c: diff >= 0 ? 'cg' : 'cr', sub: 'a tervhez képest'}
+  ];
+  items.forEach(function (it) {
+    var d = document.createElement('div');
+    d.className = 'cal-sum-item';
+    d.innerHTML = '<div class="cs-lbl">' + it.l + '</div><div class="cs-val ' + it.c + '">' + it.v + '</div>' + (it.sub ? '<div class="cs-sub">' + it.sub + '</div>' : '');
+    summary.appendChild(d);
+  });
+
+  var tip = document.getElementById('cal-tip');
+  var g = G();
+  if (actual >= g.target) {
+    tip.className = 'ibox ibox-g';
+    tip.innerHTML = '✓ Cél elérve! ' + fmt(actual) + ' gyűlt össze, ami legalább ' + fmt(g.target) + '. Bármi fölötte már tiszta nyereség.';
+  } else if (diff < 0) {
+    tip.className = 'ibox ibox-a';
+    tip.innerHTML = 'Figyelem: A tényleges megtakarítás (' + fmt(actual) + ') elmarad a tervtől (' + fmt(plannedElapsed) + '). Ha tartós, bővítsd az időkeretet, vagy növeld a havi megtakarítást a beállításokban.';
+  } else {
+    tip.className = 'ibox ibox-b';
+    tip.innerHTML = 'Tipp: Kattints egy hónapra, írd be a ténylegesen félretett összeget, és zárd le. A lezárt hónapok összege azonnal hozzáadódik a célodhoz.';
+  }
+
+  var yearsEl = document.getElementById('years');
+  yearsEl.innerHTML = '';
+  if (plans.length === 0) { yearsEl.innerHTML = '<div class="ibox ibox-a">Nincs beállított terv — állítsd be a célodat.</div>'; return; }
+  var yStart = plans[0].year, yEnd = plans[plans.length - 1].year;
+  for (var y = yStart; y <= yEnd; y++) {
+    var yr = document.createElement('div');
+    yr.className = 'yr';
+    var inPlan = plans.filter(function (p) { return p.year === y; });
+    yr.innerHTML = '<div class="yr-name">' + y + '<span>' + inPlan.length + ' hónap ebben a tervben</span></div>';
+    var grid = document.createElement('div');
+    grid.className = 'cgrid';
+    for (var m = 0; m < 12; m++) {
+      var k = key(y, m);
+      var p = map[k];
+      var cell = document.createElement('div');
+      if (!p) {
+        var catchEntry = g.entries[k];
+        var catchWork = hasWorkdaysInMonth({year: y, month: m});
+        if (catchEntry || catchWork) {
+          var cAmt = catchEntry && catchEntry.saved > 0 ? catchEntry.saved : (catchWork ? Math.round(spanWorkStats({year: y, month: m}).earn) : 0);
+          var closed = catchEntry && catchEntry.saved > 0;
+          cell.className = 'cell ' + (closed ? 'short' : 'now');
+          cell.innerHTML = '<div class="cell-top"><span class="cell-mo">' + MONTHS_HU[m] + '</span><span class="dot"></span></div>' +
+            '<div class="cell-amt ' + (closed ? 'ca' : 'cb') + '">' + fmtShort(cAmt) + '</div>' +
+            '<div class="cell-plan">pótló hónap</div>' +
+            '<span class="cell-stat">' + (closed ? 'Lezárva' : 'Nyitott') + '</span>';
+          cell.onclick = function (kk) { return function () { openModal(kk, 'month'); }; }(k);
+        } else {
+          cell.className = 'cell off';
+          cell.innerHTML = '<div class="cell-top"><span class="cell-mo">' + MONTHS_HU[m] + '</span></div>';
+        }
+      } else {
+        var st = monthStatus(p);
+        var e = g.entries[k];
+        var amt = e ? toGoal(e) : p.plan;
+        var mainCls = st === 'done' ? 'cg' : st === 'short' ? 'ca' : st === 'missed' ? 'cr' : st === 'now' ? 'cb' : '';
+        cell.className = 'cell ' + st;
+        var rate = e ? savingsRate(e) : null;
+        var pm = payMonth(p);
+        var payTxt = 'fiz.: ' + MONTHS_HU[pm.month] + (pm.year !== p.year ? ' ' + pm.year : '');
+        var planTxt = (p.i === g.months - 1 ? 'utolsó hónap · ' : 'terv: ') + fmtShort(p.plan);
+        cell.innerHTML =
+          '<div class="cell-top"><span class="cell-mo">' + MONTHS_HU[m] + '</span><span class="dot"></span></div>' +
+          '<div class="cell-amt ' + mainCls + '">' + fmtShort(amt) + '</div>' +
+          '<div class="cell-plan">' + planTxt + '</div>' +
+          '<div class="cell-pay">' + payTxt + '</div>' +
+          (rate != null ? '<div class="cell-rate ' + mainCls + '">ráta ' + rate + '%</div>' : '') +
+          '<span class="cell-stat">' + statusLabel(st) + '</span>';
+        cell.onclick = function (kk) { return function () { openModal(kk, 'month'); }; }(k);
+      }
+      grid.appendChild(cell);
+    }
+    yr.appendChild(grid);
+    yearsEl.appendChild(yr);
+  }
+}
+
+function hasWorkdaysInMonth(p) {
+  for (var fk in S.daily.days) {
+    var q = fk.split('-');
+    if (+q[0] === p.year && +q[1] - 1 === p.month) return true;
+  }
+  return false;
+}
+function finalizeMonth(p) {
+  if (!p) return;
+  var g = G();
+  var e = g.entries[p.key];
+  var hasDays = e && e.days && Object.keys(e.days).length > 0;
+  var hasWork = S.daily && hasWorkdaysInMonth(p);
+  if (!e && !hasDays && !hasWork) return;
+  if (!e) {
+    if (p.extra) return;
+    e = {saved: 0, income: null, expense: null, pocketSpent: null, note: 'Hónapzárás a napi nézetből', days: {}};
+    g.entries[p.key] = e;
+  }
+  if (hasDays) {
+    var sum = 0;
+    for (var x in e.days) sum += e.days[x];
+    e.saved = sum;
+  } else if (hasWork && !(e.saved > 0)) {
+    e.saved = Math.round(spanWorkStats(p).earn);
+    if (e.income == null) e.income = e.saved;
+  }
+  save();
+}
+function closeWorkMonth() {
+  var plans = navMonths();
+  if (!plans.length) return;
+  var p = plans[Math.max(0, Math.min(plans.length - 1, dayViewIndex))];
+  if (!p) return;
+  var k = p.key;
+  var g = G();
+  var e = g.entries[k];
+  var ws = spanWorkStats(p);
+  var earn = Math.round(ws.earn);
+  var plan = planFor(k).plan;
+  var existing = e && e.saved > 0 ? e.saved : 0;
+  if (earn <= 0 && existing <= 0) {
+    alert('Ehhez a hónaphoz még nincs ledolgozott munkanap — adj hozzá napokat, vagy zárd a havi nézetből a Hónap lezárása gombbal.');
+    return;
+  }
+  var amount = existing > 0 ? (earn > 0 ? Math.max(existing, earn) : existing) : earn;
+  var lines = 'Bezárod a(z) ' + monthFull(p.year, p.month) + ' hónapot?\n';
+  if (ws.days > 0) lines += 'Ledolgozva: ' + ws.days + ' munkanap, ' + ws.hours + ' h · nettó kereset: ' + fmt(earn) + '\n';
+  lines += 'A célhoz ez kerül: ' + fmt(amount) + (plan > 0 ? ' (terv: ' + fmt(plan) + ')' : '') + '\n';
+  if (plan > 0 && amount < plan) lines += '\nA hónap még hiányos (' + fmt(plan - amount) + ' hiányzik), de így is lezárható — a lemaradást a következő hónapokból tudod pótolni.';
+  if (!confirm(lines)) return;
+  if (!e) {
+    e = {saved: 0, income: null, expense: null, pocketSpent: null, note: 'Hónapzárás a munkanap-bér nézetből', days: {}};
+    g.entries[k] = e;
+  }
+  e.saved = amount;
+  if (e.income == null && earn > 0) e.income = earn;
+  save();
+  renderAll();
+  notifyNative('Hónap lezárva', monthFull(p.year, p.month) + ' — ' + fmt(amount) + ' félretéve, összesen ' + fmt(totalSaved()) + ' a célodból.');
+}
+function dayNav(d) {
+  var plans = navMonths();
+  if (plans.length === 0) return;
+  if (d > 0) finalizeMonth(plans[dayViewIndex]);
+  dayViewIndex = Math.max(0, Math.min(plans.length - 1, dayViewIndex + d));
+  renderAll();
+}
+function setDayMode(v) {
+  dayMode = v;
+  var s = document.getElementById('dm-save');
+  var w = document.getElementById('dm-work');
+  var st = document.getElementById('dm-set');
+  if (s) s.classList.toggle('active', v === 'save');
+  if (w) w.classList.toggle('active', v === 'work');
+  if (st) st.classList.toggle('active', v === 'set');
+  renderDailyView();
+}
+function wireDailyViewSettings() {
+  var gr = document.getElementById('d-gross-dv');
+  if (!gr) return;
+  gr.addEventListener('change', function () {
+    S.daily = S.daily || defaultDaily();
+    S.daily.useGrossRate = gr.checked;
+    save(); renderDailyView(); updateDailyHint();
+  });
+}
+function renderDailyView() {
+  var plans = navMonths();
+  if (plans.length === 0) {
+    document.getElementById('dv-grid').innerHTML = '<div class="ibox ibox-a">Nincs terv.</div>';
+    return;
+  }
+  dayViewIndex = Math.max(0, Math.min(plans.length - 1, dayViewIndex));
+  var p = plans[dayViewIndex];
+  var k = p.key; var e = G().entries[k] || {};
+  var pm = payMonth(p);
+  var grid = document.getElementById('dv-grid');
+  var tip = document.getElementById('dv-tip');
+
+  if (dayMode === 'set') {
+    var dd = S.daily = S.daily || defaultDaily();
+    document.getElementById('dv-title').textContent = 'Napi bérkövető beállítások';
+    document.getElementById('dv-sub').innerHTML = 'Válaszd ki, hogyan számolja a program a napi keresetet a Munkanap-bér nézetben.';
+    var hourly = S.calc ? S.calc.hourly : 0;
+    var hpd = (S.calc && S.calc.hpd) || 8;
+    grid.innerHTML =
+      '<div class="set">' +
+      '<div class="set-title">Bérszámítás módja</div>' +
+      '<div class="frow">' +
+      '<label class="flbl" style="display:flex;align-items:center;gap:8px">' +
+      '<input type="checkbox" id="d-gross-dv" class="fcheck"' + (dd.useGrossRate ? ' checked' : '') + '> Bruttó óradíj használata <small>adólevonás nélkül</small>' +
+      '</label>' +
+      '</div>' +
+      '<div class="hint">A kalkulátor óradíja: <b>' + fmt(hourly) + '</b> Ft/h · ' + hpd + ' h esetén <b>' + fmt(hourly * hpd) + '</b> Ft (bruttó) vagy <b>' + fmt(dailyNetRate() * hpd) + '</b> Ft (nettó, adólevonás után).</div>' +
+      '</div>';
+    wireDailyViewSettings();
+    var wa3 = document.getElementById('dv-work-actions');
+    if (wa3) wa3.style.display = 'none';
+    tip.className = 'ibox ibox-b';
+    tip.innerHTML = 'A bruttó mód az adólevonás nélküli óradíjjal számol: 8 h × 4 800 Ft = 38 400 Ft/nap. A nettó mód a kalkulátorban becsült TB+szocho-t (a keret feletti jövedelemre) is levonja.';
+    return;
+  }
+
+  if (dayMode === 'work') {
+    S.daily = S.daily || defaultDaily();
+    var st = spanWorkStats(p);
+    var pm = payMonth(p);
+    document.getElementById('dv-title').textContent = monthFull(p.year, p.month) + ' munkanapok';
+    document.getElementById('dv-sub').innerHTML = monthFull(p.year, p.month) + ' 1–' + daysInMonth(p.year, p.month) + '. · fizetés: <b>' + monthFull(pm.year, pm.month) + ' 10-ig</b> · ' + rateLabel() + ' óradíj: <b>' + fmt(dailyNetRate()) + '</b>/h · Eddig: <b>' + st.hours + ' h</b> · <b>' + st.days + '</b> munkanap · ' + fmt(st.earn);
+    grid.innerHTML = workGridHTML(k);
+    grid.setAttribute('data-k', k);
+    wireWorkGrid(grid);
+    var wa = document.getElementById('dv-work-actions');
+    if (wa) {
+      wa.style.display = '';
+      var ch = document.getElementById('dv-close-hint');
+      if (ch) ch.textContent = 'A ledolgozott keresettel zárja a hónapot — hiányos hónap is zárható.';
+    }
+    tip.className = 'ibox ibox-b';
+    tip.innerHTML = 'Tipp: Kattints egy napra, hogy munkanap legyen (alap ' + (S.calc && S.calc.hpd ? S.calc.hpd : 8) + ' h). Újra kattintva az óraszám módosítható, 0-ra állítva törlődik. A napi kereset = óraszám × óradíj' + (S.daily && S.daily.useGrossRate ? ' (adólevonás nélkül).' : ', mínusz a ' + calcTaxDesc() + '.') + ' A fenti „Napi bérkövető" sáv és a „Hónap lezárása" gomb a megnyitott hónap ledolgozott keresetét mutatja.';
+    return;
+  }
+
+  var wa2 = document.getElementById('dv-work-actions');
+  if (wa2) wa2.style.display = 'none';
+  var total = toGoal(e); var plan = p.plan;
+  var endStr = p.extra ? 'pótló hónap · eddig: ' + fmt(total) : (total >= plan ? '✓ a terv elérve' : 'maradt: ' + fmt(plan - total));
+  var pm = payMonth(p);
+  document.getElementById('dv-title').textContent = monthFull(p.year, p.month) + ' megtakarítás';
+  document.getElementById('dv-sub').innerHTML = monthFull(p.year, p.month) + ' 1–' + daysInMonth(p.year, p.month) + '. · fizetés: <b>' + monthFull(pm.year, pm.month) + ' 10-ig</b> · Összesen: <b class="cg">' + fmt(total) + '</b> · terv: ' + fmt(plan) + ' · ' + endStr;
+  grid.innerHTML = dayGridHTML(k);
+  grid.setAttribute('data-k', k);
+  wireDayGrid(grid);
+  tip.className = 'ibox ' + (total >= plan ? 'ibox-g' : 'ibox-b');
+  tip.innerHTML = total >= plan
+    ? '✓ Ebben a hónapban elérted a tervet. A fennmaradó napokon félretett összeg már tiszta nyereség.'
+    : 'Tipp: Kattints egy napra, és írd be az aznap félretett összeget. A napok összege automatikusan a hónap megtakarításához adódik.';
+}
+function dayGridHTML(k) {
+  var q = partsOf(k);
+  var p = {year: q.y, month: q.m};
+  var e = G().entries[k] || {};
+  var wd = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'];
+  var today = new Date();
+  var dim = daysInMonth(p.year, p.month);
+  var first = (new Date(p.year, p.month, 1).getDay() + 6) % 7;
+  var html = '';
+  var count = 0;
+  wd.forEach(function (w) { html += '<div class="dg-head">' + w + '</div>'; count++; });
+  for (var i = 0; i < first; i++) { html += '<div class="dg-cell off"></div>'; count++; }
+  for (var d = 1; d <= dim; d++) {
+    var fk = dayFullKey(p.year, p.month, d);
+    var amt = e.days && e.days[fk] ? e.days[fk] : 0;
+    var isToday = p.year === today.getFullYear() && p.month === today.getMonth() && d === today.getDate();
+    html += '<div class="dg-cell' + (isToday ? ' today' : '') + (amt > 0 ? ' has' : '') + '" data-day="' + fk + '">' +
+      '<div class="dg-num">' + d + '</div><div class="dg-amt' + (amt > 0 ? ' on' : '') + '">' + (amt > 0 ? fmtShort(amt) : '') + '</div></div>';
+    count++;
+  }
+  while (count % 7 !== 0) { html += '<div class="dg-cell off"></div>'; count++; }
+  return html;
+}
+function wireDayGrid(container) {
+  var k = container.getAttribute('data-k');
+  Array.prototype.forEach.call(container.querySelectorAll('.dg-cell[data-day]'), function (cell) {
+    cell.onclick = function () {
+      if (cell.querySelector('input')) return;
+      var fk = cell.getAttribute('data-day');
+      var dayNo = parseInt(fk.split('-')[2], 10);
+      var e = G().entries[k] || {};
+      var cur = (e.days && e.days[fk]) || 0;
+      cell.innerHTML = '<div class="dg-num">' + dayNo + '</div><input type="number" class="dg-input" min="0" step="500" value="' + cur + '">';
+      var inp = cell.querySelector('input');
+      var done = false;
+      function commit() {
+        if (done) return; done = true;
+        var v = Math.max(0, parseFloat(inp.value) || 0);
+        var ent = G().entries[k] = G().entries[k] || {saved: 0};
+        ent.days = ent.days || {};
+        if (v > 0) ent.days[fk] = v; else delete ent.days[fk];
+        ent.saved = 0;
+        for (var x in ent.days) ent.saved += ent.days[x];
+        save();
+        var ov = document.getElementById('overlay');
+        if (ov.classList.contains('show')) { renderOverlay(); }
+        else renderAll();
+      }
+      inp.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+        if (ev.key === 'Escape') { closeModal(); renderAll(); }
+      });
+      inp.addEventListener('blur', commit);
+      inp.focus();
+    };
+  });
+}
+
+/* ===== DAILY WORK-TRACKING ===== */
+function rateLabel() {
+  return (S.daily && S.daily.useGrossRate) ? 'bruttó' : 'nettó';
+}
+function dailyNetRate() {
+  var c = S.calc || defaultCalc();
+  if (S.daily && S.daily.useGrossRate) return c.hourly || 0;
+  var r = flatCalc(c, null, false);
+  var h = Math.max(1, r.hours || 1);
+  return Math.max(0, Math.round(r.remaining / h * 100) / 100);
+}
+function monthDailyStats(y, m) {
+  var total = {hours: 0, earn: 0, days: 0};
+  for (var fk in S.daily.days) {
+    var p = fk.split('-');
+    if (+p[0] === y && +p[1] - 1 === m) {
+      var h = S.daily.days[fk].h || 0;
+      if (h > 0) { total.hours += h; total.days++; total.earn += h * dailyNetRate(); }
+    }
+  }
+  return total;
+}
+function dailyCurrentStats(y, m) {
+  var now = new Date();
+  if (y == null) y = now.getFullYear();
+  if (m == null) m = now.getMonth();
+  var prevD = new Date(y, m - 1, 1);
+  return {
+    label: monthFull(y, m) + ' fizetés',
+    total: monthDailyStats(y, m),
+    prev: monthDailyStats(prevD.getFullYear(), prevD.getMonth()),
+    prevLabel: monthFull(prevD.getFullYear(), prevD.getMonth())
+  };
+}
+function spanWorkStats(p) {
+  var days = dailySpan(p);
+  var hours = 0, earn = 0, cnt = 0;
+  days.forEach(function (day) {
+    var fk = dayFullKey(day.y, day.m, day.d);
+    var d = S.daily && S.daily.days[fk];
+    if (d && d.h > 0) { hours += d.h; cnt++; earn += d.h * dailyNetRate(); }
+  });
+  return {hours: hours, earn: earn, days: cnt};
+}
+function workGridHTML(k) {
+  var q = partsOf(k);
+  var p = {year: q.y, month: q.m};
+  var wd = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'];
+  var today = new Date();
+  var dim = daysInMonth(p.year, p.month);
+  var first = (new Date(p.year, p.month, 1).getDay() + 6) % 7;
+  var netRate = dailyNetRate();
+  var html = '';
+  var count = 0;
+  wd.forEach(function (w) { html += '<div class="dg-head">' + w + '</div>'; count++; });
+  for (var i = 0; i < first; i++) { html += '<div class="dg-cell off"></div>'; count++; }
+  for (var d = 1; d <= dim; d++) {
+    var fk = dayFullKey(p.year, p.month, d);
+    var day = {y: p.year, m: p.month, d: d};
+    var e = S.daily && S.daily.days[fk];
+    var h = e ? Math.max(0, parseFloat(e.h) || 0) : 0;
+    var earn = h * netRate;
+    var isToday = day.y === today.getFullYear() && day.m === today.getMonth() && day.d === today.getDate();
+    html += '<div class="dg-cell work' + (h > 0 ? ' on' : '') + (isToday ? ' today' : '') + '" data-day="' + fk + '">' +
+      (h > 0 ? '<div class="dg-x" data-x="' + fk + '">×</div>' : '') +
+      '<div class="dg-num">' + day.d + '</div>' +
+      '<div class="dg-amt' + (h > 0 ? ' on' : '') + '">' + (h > 0 ? (h + ' h') : '') + '</div>' +
+      (h > 0 ? '<div class="dg-earn">' + fmtShort(earn) + '</div>' : '') +
+      '</div>';
+    count++;
+  }
+  while (count % 7 !== 0) { html += '<div class="dg-cell off"></div>'; count++; }
+  return html;
+}
+function wireWorkGrid(container) {
+  S.daily = S.daily || defaultDaily();
+  Array.prototype.forEach.call(container.querySelectorAll('.dg-cell.work[data-day]'), function (cell) {
+    cell.onclick = function (ev) {
+      if (ev.target && ev.target.getAttribute && ev.target.getAttribute('data-x')) return;
+      if (cell.querySelector('input')) return;
+      var fk = cell.getAttribute('data-day');
+      var cur = (S.daily.days[fk] || {}).h || 0;
+      if (cur === 0) {
+        S.daily.days[fk] = {h: (S.calc && S.calc.hpd) || 8};
+        save(); renderAll();
+        return;
+      }
+      var dayNo = parseInt(fk.split('-')[2], 10);
+      cell.innerHTML = '<div class="dg-num">' + dayNo + '</div><input type="number" class="dg-input" min="0" step="0.5" value="' + cur + '">';
+      var inp = cell.querySelector('input');
+      var done = false;
+      function commit() {
+        if (done) return; done = true;
+        var v = parseFloat(inp.value) || 0;
+        if (v > 0) S.daily.days[fk] = {h: v}; else delete S.daily.days[fk];
+        save(); renderAll();
+      }
+      inp.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+        if (ev.key === 'Escape') { renderAll(); }
+      });
+      inp.addEventListener('blur', commit);
+      inp.focus();
+    };
+  });
+  Array.prototype.forEach.call(container.querySelectorAll('.dg-x'), function (x) {
+    x.onclick = function (ev) {
+      ev.stopPropagation();
+      delete S.daily.days[x.getAttribute('data-x')];
+      save(); renderAll();
+    };
+  });
+}
+function renderDailyTracker() {
+  var el = document.getElementById('daily-tracker');
+  if (!el) return;
+  var det = document.getElementById('daily-tracker-detail');
+  if (!S.daily || !S.daily.enabled || !S.calc || S.calc.hourly <= 0) {
+    el.style.display = 'none';
+    if (det) det.style.display = 'none';
+    return;
+  }
+  var tm = dailyTrackerMonth();
+  var st = dailyCurrentStats(tm.year, tm.month);
+  el.style.display = '';
+  var explicit = (S.daily.target || 0) > 0;
+  var target = explicit ? S.daily.target : dailyTrackerDefaultTarget();
+  var pct = target > 0 ? Math.min(100, Math.round(st.total.earn / target * 100)) : 0;
+  document.getElementById('dv-prog').style.width = pct + '%';
+  document.getElementById('dv-val').textContent = fmt(st.total.earn) + (target > 0 ? ' · ' + pct + '%' : '');
+  document.getElementById('dv-mo').textContent = st.label + ' · ' + st.total.hours + ' h · ' + st.total.days + ' munkanap' + (target > 0 ? ' · cél ' + fmt(target) + (explicit ? '' : ' (referencia)') : '') + ' · ' + rateLabel() + ' ' + fmt(dailyNetRate()) + '/h';
+  if (det) {
+    if (st.prev.hours > 0) {
+      det.style.display = '';
+      det.innerHTML = '<span class="ovprog-proj">Előző hónap (' + st.prevLabel + '): <b>' + st.prev.hours + ' h</b> · <b>' + st.prev.days + '</b> munkanap · ' + fmt(st.prev.earn) + '</span>';
+    } else {
+      det.style.display = 'none';
+    }
+  }
+}
+function dailyTrackerMonth() {
+  if (calView === 'day' && dayMode === 'work') {
+    var plans = navMonths();
+    if (plans.length) {
+      var p = plans[Math.max(0, Math.min(plans.length - 1, dayViewIndex))];
+      if (p) return {year: p.year, month: p.month};
+    }
+  }
+  var now = new Date();
+  return {year: now.getFullYear(), month: now.getMonth()};
+}
+function dailyTrackerDefaultTarget() {
+  var g = G();
+  if (g && g.monthlyIncome > 0) return g.monthlyIncome;
+  var c = S.calc || defaultCalc();
+  var r = flatCalc(c, null, false);
+  return r.remaining > 0 ? r.remaining : 0;
+}
+function renderDailySettings() {
+  var d = S.daily = S.daily || defaultDaily();
+  var en = document.getElementById('d-enable');
+  var tg = document.getElementById('d-target');
+  var gr = document.getElementById('d-gross');
+  if (en) en.checked = !!d.enabled;
+  if (tg) tg.value = d.target || '';
+  if (gr) gr.checked = !!d.useGrossRate;
+  updateDailyHint();
+}
+function calcTaxDesc(c) {
+  if (S && S.daily && S.daily.useGrossRate) return 'adólevonás nélkül (bruttó)';
+  return 'TB+szocho (31,5%, csak a keret feletti jövedelemre)';
+}
+function updateDailyHint() {
+  var h = document.getElementById('d-hint');
+  if (h) h.innerHTML = 'Az óradíj a kalkulátor Óradíj mezőjéből jön (jelenleg: <b>' + fmt(S.calc ? S.calc.hourly : 0) + '</b>/h). A napi kereset = óraszám × óradíj, ' + (S.daily && S.daily.useGrossRate ? 'adólevonás nélkül (bruttó <b>' + fmt(dailyNetRate()) + '</b>/h).' : 'a ' + calcTaxDesc() + ' levonása után (nettó <b>' + fmt(dailyNetRate()) + '</b>/h).') + ' A fejléc „Napi bérkövető" sávja a mindenkori hónap (1–30/31.) munkanapjait összegzi — a fizetés a következő hónap 10-ig érkezik. A Munkanap-bér nézetben a sáv az épp megnyitott hónapot mutatja. Ha nem adsz meg havi bér célt, a sáv a kalkulátor becsült havi megmaradásához mér (referencia).';
+}
+
+/* ===== OVERLAY / MODAL ===== */
+function openModal(k, mode) {
+  modalKey = k; modalMode = mode || 'month';
+  document.getElementById('overlay').classList.add('show');
+  renderOverlay();
+}
+function closeModal() {
+  document.getElementById('overlay').classList.remove('show');
+  modalKey = null;
+}
+function renderOverlay() {
+  var ov = document.getElementById('overlay');
+  var k = modalKey; var p = partsOf(k); var g = G(); var e = g.entries[k] || {};
+  if (modalMode === 'calc') {
+    ov.innerHTML =
+      '<div class="modal modal-wide">' +
+      '<div class="m-title">Bérkalkulátor</div>' +
+      '<div class="m-sub">Alanyi adómentes egyéni vállalkozó · ' + monthFull(p.y, p.m) + ' fizetése</div>' +
+      calcPanelHTML('co') +
+      '<div class="m-actions">' +
+      '<button class="btn" onclick="calcApply()">Alkalmaz a hónapra</button>' +
+      '<button class="btn btn-ghost" onclick="openModal(\'' + k + '\',\'month\')">Vissza</button>' +
+      '</div></div>';
+    wireCalc('co');
+    return;
+  }
+  if (modalMode === 'day') {
+    var pm = payMonth(p);
+    ov.innerHTML =
+      '<div class="modal modal-wide">' +
+      '<div class="m-title">Napi bontás — ' + monthFull(p.y, p.m) + ' fizetés</div>' +
+      '<div class="m-sub" id="dsub">' + monthFull(p.y, p.m) + ' 1–' + daysInMonth(p.y, p.m) + '. munkanapjai · fizetés: <b>' + monthFull(pm.year, pm.month) + ' 10-ig</b> · Összesen: <b class="cg">' + fmt(toGoal(e)) + '</b> · terv: ' + fmt(planFor(k).plan) + '</div>' +
+      '<div class="dgrid" id="dgrid" data-k="' + k + '">' + dayGridHTML(k) + '</div>' +
+      '<div class="m-actions">' +
+      '<button class="btn btn-ghost" onclick="openModal(\'' + k + '\',\'month\')">Vissza</button>' +
+      '<button class="btn" onclick="closeModal()">Kész</button>' +
+      '</div></div>';
+    wireDayGrid(document.getElementById('dgrid'));
+    return;
+  }
+  var inc = e.income != null ? e.income : g.monthlyIncome;
+  var saved = e.saved || 0; var exp = e.expense != null ? e.expense : '';
+  var ps = e.pocketSpent != null ? e.pocketSpent : '';
+  var isClosed = !!g.entries[k];
+  var plan = planFor(k).plan;
+  var pm = payMonth(p);
+  ov.innerHTML =
+    '<div class="modal">' +
+    '<div class="m-title">' + monthFull(p.y, p.m) + '</div>' +
+    '<div class="m-sub">' + dateLabel(p.y, p.m) + ' · fizetés: ' + monthFull(pm.year, pm.month) + ' (10-ig) · ' + (isClosed ? 'lezárva — szerkesztés' : 'zárd le a hónapot') + '</div>' +
+    '<div class="m-row"><span class="mr-l">Tervezett megtakarítás</span><span class="mr-v">' + fmt(plan) + '</span></div>' +
+    '<div class="frow"><label class="flbl">Jövedelem (Ft)</label><input type="number" class="finput" id="m-inc" min="0" step="10000" value="' + (inc || '') + '"></div>' +
+    '<div class="frow"><label class="flbl">Félretett megtakarítás (Ft)</label><input type="number" class="finput" id="m-amt" min="0" step="1000" value="' + (saved || '') + '"></div>' +
+    '<div class="frow"><label class="flbl">Fix kiadások (Ft) <small>opcionális — lakhatás, számlák, étel</small></label><input type="number" class="finput" id="m-exp" min="0" step="10000" value="' + exp + '"></div>' +
+    '<div class="frow"><label class="flbl">Elköltött zsebpénz (Ft) <small>a keret maradéka automatikusan a célhoz adódik</small></label><input type="number" class="finput" id="m-ps" min="0" step="1000" value="' + ps + '"></div>' +
+    '<div class="frow"><label class="flbl">Megjegyzés (opcionális)</label><input type="text" class="finput" id="m-note" placeholder="pl. 13. fizetés, prémium" value="' + esc(e.note) + '"></div>' +
+    '<div class="m-sum" id="m-sum"></div>' +
+    '<div class="m-actions">' +
+    '<button class="btn" onclick="saveMonthModal()">' + (isClosed ? 'Mentés' : 'Hónap lezárása') + '</button>' +
+    '<button class="btn btn-ghost" onclick="openModal(\'' + k + '\',\'day\')">Napi bontás</button>' +
+    '<button class="btn btn-ghost" onclick="openModal(\'' + k + '\',\'calc\')">Bérkalkulátor</button>' +
+    '<button class="btn btn-ghost" onclick="closeModal()">Mégse</button>' +
+    '<button class="btn btn-red" onclick="undoModal()" style="' + (isClosed ? '' : 'display:none') + '">Megnyitás újra</button>' +
+    '</div></div>';
+  ['m-inc', 'm-amt', 'm-exp', 'm-ps'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', updateMsum);
+  });
+  updateMsum();
+}
+function updateMsum() {
+  var el = document.getElementById('m-sum'); if (!el) return;
+  var inc = parseFloat(document.getElementById('m-inc').value) || 0;
+  var amt = parseFloat(document.getElementById('m-amt').value) || 0;
+  var exp = parseFloat(document.getElementById('m-exp').value) || 0;
+  var psRaw = document.getElementById('m-ps').value;
+  var ps = psRaw === '' ? null : parseFloat(psRaw) || 0;
+  var rate = inc > 0 ? Math.round(amt / inc * 100) : null;
+  var allow = Math.max(0, inc - amt - exp);
+  var left = ps != null ? Math.max(0, allow - ps) : 0;
+  var total = amt + left;
+  var html = '<div class="m-row"><span class="mr-l">Megtakarítási ráta</span><span class="mr-v">' + (rate != null ? rate + '%' : '—') + '</span></div>' +
+    '<div class="m-row"><span class="mr-l">Zsebpénz keret</span><span class="mr-v">' + fmt(allow) + '</span></div>';
+  if (ps != null) html += '<div class="m-row"><span class="mr-l">Maradék zsebpénz → célhoz</span><span class="mr-v cg">' + fmt(left) + '</span></div>';
+  html += '<div class="m-row" style="background:var(--green-dim);border:1px solid var(--green-b)"><span class="mr-l">Összesen a célhoz</span><span class="mr-v cg">' + fmt(total) + '</span></div>';
+  el.innerHTML = html;
+}
+function saveMonthModal() {
+  if (!modalKey) return;
+  var k = modalKey;
+  var incRaw = document.getElementById('m-inc').value;
+  var amt = Math.max(0, parseFloat(document.getElementById('m-amt').value) || 0);
+  var expRaw = document.getElementById('m-exp').value;
+  var psRaw = document.getElementById('m-ps').value;
+  var note = cap(document.getElementById('m-note').value.trim(), 500);
+  var inc = incRaw === '' ? null : Math.max(0, parseFloat(incRaw) || 0);
+  var exp = expRaw === '' ? null : Math.max(0, parseFloat(expRaw) || 0);
+  var ps = psRaw === '' ? null : Math.max(0, parseFloat(psRaw) || 0);
+  var old = G().entries[k] || {};
+  G().entries[k] = {saved: amt, income: inc, expense: exp, pocketSpent: ps, note: note, days: old.days || {}};
+  save();
+  var label = monthFullFor(k);
+  closeModal();
+  renderAll();
+  notifyNative('Hónap lezárva ', label + ' — ' + fmt(amt) + ' félretéve, összesen ' + fmt(totalSaved()) + ' a célodból.');
+}
+function undoModal() {
+  if (!modalKey) return;
+  if (!confirm('Megnyitod újra ezt a hónapot? A félretett összeg kikerül az összesítésből.')) return;
+  delete G().entries[modalKey];
+  save(); closeModal(); renderAll();
+}
+
+/* ===== STATS ===== */
+function renderStats() {
+  var g = G(); var saved = totalSaved();
+  var cards = document.getElementById('stats-cards');
+  cards.innerHTML = '';
+  var avg = closedCount() > 0 ? saved / closedCount() : 0;
+  var rates = []; var best = null, worst = null;
+  var months = planMonths();
+  months.forEach(function (p) {
+    var e = g.entries[p.key];
+    if (!e) return;
+    var t = toGoal(e);
+    if (best == null || t > best.v) best = {k: p.key, v: t, lbl: MONTHS_HU[p.month]};
+    if (worst == null || t < worst.v) worst = {k: p.key, v: t, lbl: MONTHS_HU[p.month]};
+    var r = savingsRate(e); if (r != null) rates.push(r);
+  });
+  var avgRate = rates.length ? Math.round(rates.reduce(function (a, b) { return a + b; }, 0) / rates.length) : null;
+  var st = streak();
+  var items = [
+    {l: 'Összes megtakarítás', v: fmt(saved), sub: fmt(g.target) + ' cél'},
+    {l: 'Átlag / hónap', v: fmt(avg), sub: closedCount() + ' lezárt hónap'},
+    {l: 'Legjobb hónap', v: best ? fmtShort(best.v) : '—', sub: best ? best.lbl : 'még nincs adat'},
+    {l: 'Leggyengébb hónap', v: worst ? fmtShort(worst.v) : '—', sub: worst ? worst.lbl : 'még nincs adat'},
+    {l: 'Átlag megtakarítási ráta', v: avgRate != null ? avgRate + '%' : '—', sub: 'jövedelemhez képest'},
+    {l: 'Streak', v: st > 0 ? st + ' hó' : '—', sub: st > 0 ? 'zsinórban teljesítve' : 'még nincs'}
+  ];
+  items.forEach(function (it) {
+    var d = document.createElement('div');
+    d.className = 'st-card';
+    d.innerHTML = '<div class="st-lbl">' + it.l + '</div><div class="st-val">' + it.v + '</div><div class="st-sub">' + it.sub + '</div>';
+    cards.appendChild(d);
+  });
+
+  var chart = document.getElementById('chart');
+  chart.innerHTML = '';
+  var maxv = 1;
+  months.forEach(function (p) {
+    maxv = Math.max(maxv, Math.max(planAmount(p.i), g.entries[p.key] ? toGoal(g.entries[p.key]) : 0));
+  });
+  months.forEach(function (p) {
+    var e = g.entries[p.key];
+    var act = e ? toGoal(e) : 0;
+    var plan = planAmount(p.i);
+    var ph = Math.max(3, Math.round(plan / maxv * 100));
+    var ah = Math.max(0, Math.round(act / maxv * 100));
+    var ok = act >= plan;
+    var row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = '<div class="bar-lbl">' + MONTHS_HU[p.month] + '</div>' +
+      '<div class="bar-track"><div class="bar-plan" style="height:' + ph + '%"></div><div class="bar-act ' + (ok ? 'ok' : 'low') + '" style="height:' + ah + '%"></div></div>' +
+      '<div class="bar-val">' + fmtShort(act) + '</div>';
+    chart.appendChild(row);
+  });
+
+  var ms = document.getElementById('milestones');
+  ms.innerHTML = '';
+  var msList = milestones();
+  if (msList.length === 0) {
+    ms.innerHTML = '<div class="m-empty">Még nincs elért mérföldkő. Az első a cél 25%-a lesz (' + fmt(g.target * 0.25) + ').</div>';
+  } else {
+    msList.forEach(function (m) {
+      var d = document.createElement('div');
+      d.className = 'milestone';
+      d.innerHTML = '<span>' + m.month + '</span><span class="m-pct">' + m.pct + '% — ' + fmt(m.cum) + '</span>';
+      ms.appendChild(d);
+    });
+  }
+
+  var fc = document.getElementById('forecast');
+  fc.innerHTML = '';
+  var pace = currentPaceDate();
+  var ab = aheadBehind();
+  var blocks = ['Tervezett cél-dátum: <b>' + planEndDate() + '</b>'];
+  if (pace) blocks.push('Jelenlegi tempóval: <b>' + pace + '</b>');
+  if (ab >= 0) blocks.push('A tervhez képest +<b>' + fmt(ab) + '</b> előrébb jársz');
+  else blocks.push('A tervhez képest <b>' + fmt(Math.abs(ab)) + '</b> lemaradásban vagy');
+  if (g.annualRate > 0) {
+    var ip = interestProjection();
+    blocks.push('Kamathozammal: +<b>' + fmt(ip.interest) + '</b>, becsült végösszeg <b>' + fmt(ip.total) + '</b>');
+  }
+  fc.innerHTML = '<div class="ibox ibox-b">' + blocks.join(' · ') + '</div>';
+}
+
+/* ===== HISTORY ===== */
+function renderHistory() {
+  var el = document.getElementById('hist-list');
+  el.innerHTML = '';
+  var plans = planMonths(); var cum = 0;
+  plans.forEach(function (p) {
+    var g = G(); var e = g.entries[p.key];
+    var st = monthStatus(p);
+    var badge = {done:'hb-g', short:'hb-a', missed:'hb-r', now:'hb-b', future:'hb-n'}[st];
+    var row = document.createElement('div');
+    row.className = 'hrow';
+    var t = e ? toGoal(e) : 0;
+    var amtStr = e ? fmt(t) : '—';
+    var amtCls = e ? (t >= p.plan ? 'cg' : 'ca') : '';
+    var diffStr = '';
+    if (e) {
+      var d = t - p.plan;
+      diffStr = '<span class="h-diff ' + (d >= 0 ? 'h-pos' : 'h-neg') + '">' + (d >= 0 ? '+' : '') + fmt(d) + '</span>';
+    }
+    if (e) cum += t;
+    var rate = e ? savingsRate(e) : null;
+    var sub = dateLabel(p.year, p.month);
+    if (e && e.income != null) sub += ' · jöv.: ' + fmtShort(e.income);
+    if (rate != null) sub += ' · ráta ' + rate + '%';
+    if (e && e.pocketSpent != null) sub += ' · zseb: ' + fmtShort(e.pocketSpent);
+    if (e && e.note) sub += ' · ' + esc(e.note);
+    row.innerHTML =
+      '<div class="h-l">' + monthFull(p.year, p.month) + '<span class="h-s" style="margin-left:8px">' + sub + '</span></div>' +
+      '<div class="h-r"><span class="h-amt ' + amtCls + '">' + amtStr + '</span>' + diffStr + '<span class="hbadge ' + badge + '">' + statusLabel(st) + '</span></div>';
+    row.onclick = function (kk) { return function () { openModal(kk, 'month'); }; }(p.key);
+    el.appendChild(row);
+  });
+  if (plans.length === 0) {
+    el.innerHTML = '<div class="ibox ibox-a">Nincs beállított terv. Állítsd be a célodat a Beállítások fülön.</div>';
+    return;
+  }
+  var tot = document.createElement('div');
+  tot.className = 'hrow h-total';
+  tot.innerHTML = '<div class="h-l">Összesen</div><div class="h-r"><span class="h-amt">' + fmt(cum) + '</span></div>';
+  el.appendChild(tot);
+}
+
+/* ===== SETTINGS ===== */
+var settingsWired = false;
+function renderSettings() {
+  var g = G();
+  document.getElementById('f-name').value = g.name;
+  document.getElementById('f-target').value = g.target;
+  document.getElementById('f-income').value = g.monthlyIncome;
+  document.getElementById('f-max').value = g.maxMonthly;
+  document.getElementById('f-rate').value = g.annualRate;
+  document.getElementById('f-start').value = g.startYear + '-' + pad(g.startMonth + 1);
+  document.getElementById('f-months').value = g.months;
+  if (!settingsWired) {
+    settingsWired = true;
+    ['f-target', 'f-income', 'f-max', 'f-months'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateHints);
+    });
+  }
+  updateHints();
+}
+function updateHints() {
+  var g = G();
+  var target = parseFloat(document.getElementById('f-target').value) || 0;
+  var max = parseFloat(document.getElementById('f-max').value) || 0;
+  var income = parseFloat(document.getElementById('f-income').value) || 0;
+  var months = parseInt(document.getElementById('f-months').value, 10) || 1;
+  var required = Math.ceil(target / months);
+
+  var mh = document.getElementById('f-max-hint');
+  if (max > 0) {
+    mh.innerHTML = 'Ebből adódik: minimum <b>' + Math.max(1, Math.ceil(target / max)) + '</b> hónap a célösszeg eléréséhez.';
+  } else {
+    mh.textContent = 'Állítsd be, mennyit tudsz maximum félretenni havonta (általában a jövedelem, de lehet kevesebb is).';
+  }
+
+  var mh2 = document.getElementById('f-months-hint');
+  mh2.innerHTML = 'Havi terv ezzel: <b>' + fmt(required) + '</b> / hónap.';
+
+  var warn = document.getElementById('f-warning');
+  warn.innerHTML = '';
+  if (required > max && max > 0) {
+    warn.innerHTML = '<div class="ibox ibox-a" style="margin-bottom:0">Figyelem: A havi terv (' + fmt(required) + ') meghaladja a max havi megtakarításodat (' + fmt(max) + '). Növeld az időkeretet, vagy emeld a max havi összeget.</div>';
+  } else if (required > income && income > 0) {
+    warn.innerHTML = '<div class="ibox ibox-r" style="margin-bottom:0">Figyelem: A havi terv (' + fmt(required) + ') meghaladja a havi jövedelmedet (' + fmt(income) + '). Ez így nem teljesíthető — növeld az időkeretet.</div>';
+  } else if (max > income && income > 0) {
+    warn.innerHTML = '<div class="ibox ibox-b" style="margin-bottom:0">Tipp: A max havi megtakarítás nagyobb a jövedelemnél. Ez csak akkor reális, ha van rendszeres egyéb bevételed (pl. prémium, mellékállás).</div>';
+  }
+}
+function applySuggestion() {
+  var target = parseFloat(document.getElementById('f-target').value) || 0;
+  var max = parseFloat(document.getElementById('f-max').value) || 0;
+  document.getElementById('f-months').value = Math.max(1, Math.ceil(target / max));
+  updateHints();
+}
+function saveSettings() {
+  var g = G();
+  var name = cap(document.getElementById('f-name').value.trim(), 120) || 'Megtakarítási célom';
+  var target = parseFloat(document.getElementById('f-target').value) || 0;
+  var income = parseFloat(document.getElementById('f-income').value) || 0;
+  var max = parseFloat(document.getElementById('f-max').value) || 0;
+  var rate = parseFloat(document.getElementById('f-rate').value) || 0;
+  var start = document.getElementById('f-start').value;
+  var months = parseInt(document.getElementById('f-months').value, 10) || 1;
+
+  if (target <= 0) { alert('Adj meg érvényes célösszeget.'); return; }
+  if (max <= 0) { alert('Adj meg érvényes max havi megtakarítást.'); return; }
+
+  g.name = name; g.target = target; g.monthlyIncome = income;
+  g.maxMonthly = max; g.annualRate = Math.max(0, rate);
+  g.months = Math.max(1, months);
+  if (start) {
+    var parts = start.split('-');
+    g.startYear = parseInt(parts[0], 10);
+    g.startMonth = parseInt(parts[1], 10) - 1;
+  }
+  save();
+  renderAll(); renderGoalSwitcher(); setTab('cal');
+}
+function resetAll() {
+  if (!confirm('Biztosan törlöd az összes adatot és visszaállítod az alapértelmezett célokat?')) return;
+  S = defaultState();
+  save(); renderAll(); renderGoalSwitcher(); setTab('set'); renderSettings();
+}
+
+/* ===== EXPORT / IMPORT ===== */
+function exportJSON() {
+  var json = JSON.stringify(S, null, 2);
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.exportFile) {
+    try {
+      window.webkit.messageHandlers.exportFile.postMessage({name: 'goaltracker-backup.json', content: json});
+      return;
+    } catch (e) {}
+  }
+  var blob = new Blob([json], {type: 'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'goaltracker-backup.json';
+  a.click();
+}
+function toCSV() {
+  var lines = [['Év', 'Hónap', 'Jövedelem', 'Megtakarítás', 'Kiadás', 'Zsebpénz keret', 'Zsebpénz elköltött', 'Maradék a célhoz', 'Ráta %', 'Megjegyzés'].map(csvEsc).join(';')];
+  var plans = planMonths();
+  plans.forEach(function (p, i) {
+    var e = G().entries[p.key] || {};
+    var sav = e.saved || 0;
+    var inc = incomeOf(e);
+    var exp = e.expense || 0;
+    var allow = pocketAllowance(e);
+    var left = pocketLeftover(e);
+    var rate = savingsRate(e);
+    lines.push([p.year, MONTHS_FULL[p.month], inc || '', sav || '', exp || '', allow, (e.pocketSpent != null ? e.pocketSpent : ''), left || '', rate != null ? rate + '%' : '', (e.note || '')].map(csvEsc).join(';'));
+  });
+  return lines.join('\n');
+}
+function exportCSV() {
+  var csv = toCSV();
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.exportFile) {
+    try {
+      window.webkit.messageHandlers.exportFile.postMessage({name: 'goaltracker-history.csv', content: csv});
+      return;
+    } catch (e) {}
+  }
+  copyText(csv, 'A CSV a vágólapra került — illeszd be Excelbe/Sheets-be.');
+}
+function importJSON() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.importFile) {
+    try { window.webkit.messageHandlers.importFile.postMessage({}); return; } catch (e) {}
+  }
+  function apply(json) {
+    try {
+      var o = JSON.parse(json);
+      if (!o.goals || !o.active || !o.goals[o.active]) { alert('Nem érvényes mentés.'); return; }
+      if (!confirm('Felülírja a jelenlegi adatokat?')) return;
+      S = normalize(o); save(); renderAll(); renderGoalSwitcher(); renderSettings(); alert('Importálva.');
+    } catch (e) { alert('Hibás JSON.'); }
+  }
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    navigator.clipboard.readText().then(apply, function () { alert('Nem sikerült a vágólap olvasása.'); });
+  } else {
+    alert('A vágólap olvasása nem támogatott ebben a nézetben — használd a macOS app fájl-importját.');
+  }
+}
+
+/* ===== TABS ===== */
+function setTab(t) {
+  ['cal', 'stat', 'hist', 'calc', 'set'].forEach(function (x) {
+    document.getElementById('tab-' + x).style.display = t === x ? 'block' : 'none';
+  });
+  var order = ['cal', 'stat', 'hist', 'calc', 'set'];
+  document.querySelectorAll('.tab').forEach(function (b, i) {
+    b.classList.toggle('active', order[i] === t);
+  });
+  if (t === 'cal') renderCalendar();
+  if (t === 'stat') renderStats();
+  if (t === 'hist') renderHistory();
+  if (t === 'calc') renderCalc();
+  if (t === 'set') renderSettings();
+}
+
+function renderAll() {
+  renderHeader();
+  renderMetrics();
+  renderProgress();
+  renderCalendar();
+  renderHistory();
+  renderStats();
+  renderCalc();
+  renderGoalSwitcher();
+}
+
+/* ===== EVENTS ===== */
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter') {
+    var ov = document.getElementById('overlay');
+    if (!ov.classList.contains('show')) return;
+    if (modalMode === 'month') {
+      var ae = document.activeElement;
+      if (ae && ae.id && ae.id.indexOf('m-') === 0 && ae.id !== 'm-days') { e.preventDefault(); saveMonthModal(); }
+    }
+  }
+});
+
+function bootRender() {
+  if (bootDone) return;
+  bootDone = true;
+  dayViewIndex = defaultDayIndex();
+  renderAll();
+  var plans = planMonths(); var missed = null;
+  for (var i = plans.length - 1; i >= 0; i--) {
+    if (monthStatus(plans[i]) === 'missed' && !G().entries[plans[i].key]) { missed = plans[i]; break; }
+  }
+  if (missed) {
+    setTimeout(function () {
+      notifyNative('Emlékeztető', monthFullFor(missed.key) + ' még nincs lezárva — nyisd meg a naptárat.');
+    }, 1500);
+  }
+}
+
+if (hasNative) {
+  try { window.webkit.messageHandlers.loadState.postMessage({}); } catch (e) { bootRender(); }
+  setTimeout(function () { bootRender(); }, 3000);
+} else {
+  bootRender();
+}
+
+/* PWA: offline-támogatás (csak http/https alatt — a natív appok file:// alatt átugorják) */
+if ('serviceWorker' in navigator && window.location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
