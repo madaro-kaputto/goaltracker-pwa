@@ -22,6 +22,7 @@
   --r:14px; --rs:8px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{overflow-x:hidden;}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;min-height:100dvh;line-height:1.6;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;overflow-x:hidden;}
 button,.tab,.btn,.qc-btn,.cell,.dg-cell,.gselect,.fcheck{touch-action:manipulation;}
 
@@ -487,7 +488,7 @@ button,.tab,.btn,.qc-btn,.cell,.dg-cell,.gselect,.fcheck{touch-action:manipulati
 
 </div>
 
-<div class="footer">Az adataid a gépeden maradnak — <strong>a célt soha ne feledd.</strong></div>
+<div class="footer">Az adataid a gépeden maradnak — <strong>a célt soha ne feledd.</strong> <span class="ver" id="app-ver"></span></div>
 
 <!-- OVERLAY -->
 <div class="overlay" id="overlay"></div>
@@ -501,6 +502,11 @@ var modalMode = 'month';
 var calView = 'month';
 var dayViewIndex = 0;
 var dayMode = 'save';
+var APP_VERSION = 'v3';
+(function () {
+  var v = document.getElementById('app-ver');
+  if (v) v.textContent = '· verzió ' + APP_VERSION;
+})();
 
 /* ===== STATE ===== */
 function defaultGoal(id) {
