@@ -2141,9 +2141,11 @@ function exportJSON() {
   }
   var blob = new Blob([json], {type: 'application/json'});
   var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  var url = URL.createObjectURL(blob);
+  a.href = url;
   a.download = 'goaltracker-backup.json';
   a.click();
+  URL.revokeObjectURL(url);
 }
 function toCSV() {
   var lines = [['Év', 'Hónap', 'Jövedelem', 'Megtakarítás', 'Kiadás', 'Zsebpénz keret', 'Zsebpénz elköltött', 'Maradék a célhoz', 'Ráta %', 'Megjegyzés'].map(csvEsc).join(';')];
