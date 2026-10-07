@@ -1,5 +1,5 @@
 /* Célkövető Naptár — service worker (offline PWA) */
-const CACHE = 'gt-pwa-v5';
+const CACHE = 'gt-pwa-v6';
 const SHELL = [
   'index.html',
   'manifest.json',
