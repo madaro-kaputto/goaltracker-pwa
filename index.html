@@ -394,8 +394,8 @@ button,.tab,.btn,.qc-btn,.cell,.dg-cell,.gselect,.fcheck{touch-action:manipulati
 
   <!-- CALCULATOR -->
   <div id="tab-calc" style="display:none">
-    <div class="slbl">Átalányadós kalkulátor — TB és szocho (mellékállás)</div>
-    <div class="ibox ibox-b">Heti legalább 36 órás munkaviszony mellett végzett, átalányadózó egyéni vállalkozás becsült TB- és szocho-terheit számolja. A bevétel 55%-a számított jövedelem (45%-os általános költséghányad), ezt csökkenti az éves, göngyölített 1 936 800 Ft-os adómentes jövedelmi keret; a keret feletti részre 18,5% TB és 13% szocho (együtt 31,5%) fizetendő. SZJA-t nem számol.</div>
+    <div class="slbl">Átalányadós kalkulátor — mellékállású és főfoglalkozású</div>
+    <div class="ibox ibox-b"><b>Mellékállású</b> (heti 36+ órás munkaviszony mellett): TB (18,5%) + szocho (13%) a keret feletti számított jövedelemre, SZJA nélkül. <b>Főfoglalkozású</b> (önálló, nincs más jogviszony): minimum járulékalap, SZJA (15%) is, és visszafelé számítás (célnettó → számla/napidíj/óradíj) a 2026-os szabályok szerint.</div>
     <div class="set">
       <div id="tab-calc-body"></div>
     </div>
@@ -533,7 +533,8 @@ function defaultCalc() {
   return {
     hourly: 4800, hpd: 8, days: days,
     costRate: 45, weekHours: 40, usedExemption: 0,
-    periodMode: 'month', showVatExemption: true, hoursOverride: null
+    periodMode: 'month', showVatExemption: true, hoursOverride: null,
+    mode: 'side', gross: 0, netTarget: 0, mainDays: 22, mainHpd: 8, useMinWage: false
   };
 }
 function defaultDaily() {
@@ -600,6 +601,11 @@ function ensureCalc(o) {
   o.calc.usedExemption = Math.max(0, +o.calc.usedExemption || 0);
   o.calc.periodMode = o.calc.periodMode === 'year' ? 'year' : 'month';
   o.calc.showVatExemption = !!o.calc.showVatExemption;
+  o.calc.mode = o.calc.mode === 'main' ? 'main' : 'side';
+  o.calc.gross = Math.max(0, +o.calc.gross || 0);
+  o.calc.netTarget = Math.max(0, +o.calc.netTarget || 0);
+  o.calc.mainDays = Math.min(31, Math.max(1, Math.floor(+o.calc.mainDays) || 22));
+  o.calc.useMinWage = !!o.calc.useMinWage;
   if (o.calc.hoursOverride == null || String(o.calc.hoursOverride) === '') o.calc.hoursOverride = null;
   else o.calc.hoursOverride = Math.max(0, parseFloat(o.calc.hoursOverride) || 0) > 0 ? Math.max(0, parseFloat(o.calc.hoursOverride) || 0) : null;
 }
@@ -1077,7 +1083,199 @@ function flatTablesHTML(c) {
   }
   return flatTableHTML(c, dayRows) + dayNote + (!r.yearMode ? flatYearTableHTML(c, flatYearRows(c)) : '');
 }
+
+/* ===== FŐFOGLALKOZÁSÚ (önálló) ÁTALÁNYADÓ — nettó/számla kalkulátor =====
+   A ~/Downloads/atalanyado szamitas.md szabályzat szerint (2026).
+   Eltérés a mellékállásútól: minimum járulékalap, SZJA is van, havi adómentes
+   rész 161 400 Ft, és visszafelé is számol (célnettó → számla/napidíj/óradíj). */
+var FLATMAIN = {
+  TB: 0.185,
+  SZOCHO: 0.13,
+  SZJA: 0.15,
+  MIN_WAGE: 322800,
+  GUAR_MIN_WAGE: 373200,
+  EXEMPT_ANNUAL: 1936800,
+  EXEMPT_MONTHLY: 161400,
+  COST_RATE: 0.45,
+  HOURS_PER_DAY: 8
+};
+function mainForward(c) {
+  var gross = Math.max(0, +c.gross || 0);
+  var minBase = c.useMinWage ? FLATMAIN.MIN_WAGE : FLATMAIN.GUAR_MIN_WAGE;
+  var costRate = Math.min(100, Math.max(0, c.costRate != null ? +c.costRate : FLATMAIN.COST_RATE * 100));
+  var incomeRatio = (100 - costRate) / 100;
+  var income = money(gross * incomeRatio);
+  var taxable = Math.max(0, income - FLATMAIN.EXEMPT_MONTHLY);
+  var contribBase = Math.max(taxable, minBase);
+  var tb = money(contribBase * FLATMAIN.TB);
+  var szocho = money(contribBase * FLATMAIN.SZOCHO);
+  var szja = money(taxable * FLATMAIN.SZJA);
+  var contrib = tb + szocho;
+  var net = gross - contrib - szja;
+  return {
+    gross: gross, incomeRatio: incomeRatio, minBase: minBase,
+    income: income, taxable: taxable, contribBase: contribBase,
+    tb: tb, szocho: szocho, szja: szja, contrib: contrib, net: net,
+    rate: gross > 0 ? money((contrib + szja) / gross * 100) : 0,
+    atMinBase: taxable <= minBase
+  };
+}
+function mainReverse(c) {
+  var netTarget = Math.max(0, +c.netTarget || 0);
+  var days = Math.min(31, Math.max(1, Math.floor(+c.mainDays) || 22));
+  var hpd = Math.max(1, +c.mainHpd || FLATMAIN.HOURS_PER_DAY);
+  var minBase = c.useMinWage ? FLATMAIN.MIN_WAGE : FLATMAIN.GUAR_MIN_WAGE;
+  var costRate = Math.min(100, Math.max(0, c.costRate != null ? +c.costRate : FLATMAIN.COST_RATE * 100));
+  var incomeRatio = (100 - costRate) / 100;
+  var ex = FLATMAIN.EXEMPT_MONTHLY;
+  var minContrib = money(minBase * FLATMAIN.TB) + money(minBase * FLATMAIN.SZOCHO);
+  var sumTax = FLATMAIN.TB + FLATMAIN.SZOCHO + FLATMAIN.SZJA;
+  var gMin = (netTarget + minContrib - FLATMAIN.SZJA * ex) / (1 - FLATMAIN.SZJA * incomeRatio);
+  var threshold = (minBase + ex) / incomeRatio;
+  var g = gMin <= threshold
+    ? gMin
+    : (netTarget - sumTax * ex) / (1 - sumTax * incomeRatio); // a szabályzat 2. képlete: MINUSZ, nem plusz
+  var gross = Math.max(0, money(g));
+  var fwd = mainForward({gross: gross, useMinWage: !!c.useMinWage, costRate: costRate, mainHpd: hpd});
+  if (fwd.taxable <= 0) {
+    // Nagyon alacsony célnettó: a jövedelem az adómentes 161 400 Ft alatt marad,
+    // ilyenkor nettó = gross − minimum járulék, tehát gross ≥ netTarget + minContrib.
+    gross = Math.max(gross, money(netTarget + minContrib));
+    fwd = mainForward({gross: gross, useMinWage: !!c.useMinWage, costRate: costRate, mainHpd: hpd});
+  }
+  var roundedUp = Math.ceil(gross / 500) * 500;
+  return {
+    netTarget: netTarget, gross: gross, roundedUp: roundedUp,
+    days: days, hpd: hpd,
+    daily: money(gross / days), hourly: Math.round(gross / (days * hpd) * 10) / 10,
+    dailyUp: money(roundedUp / days), hourlyUp: Math.round(roundedUp / (days * hpd) * 10) / 10,
+    threshold: money(threshold), fwd: fwd
+  };
+}
+function mainQuickRows() {
+  var out = [];
+  [450000, 500000, 550000, 600000].forEach(function (net) {
+    var r = mainReverse({netTarget: net, useMinWage: false, costRate: 45, mainDays: 22, mainHpd: 8});
+    out.push({net: net, gross: r.gross, d20: money(r.gross / 20), d22: money(r.gross / 22)});
+  });
+  return out;
+}
+function mainResultsHTML(c, f, r) {
+  var reverseBlock = r.netTarget > 0
+    ? '<div class="m-row"><span class="mr-l">Szükséges havi számla</span><span class="mr-v">' + fmt(r.gross) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Javasolt számla (500 Ft-ra felfelé)</span><span class="mr-v">' + fmt(r.roundedUp) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Napidíj (' + r.days + ' nap)</span><span class="mr-v">' + fmt(r.daily) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Napidíj, javasolt számlából</span><span class="mr-v">' + fmt(r.dailyUp) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Óradíj</span><span class="mr-v">' + fmt(r.hourly) + ' /h</span></div>' +
+      (r.gross > 0 ? '<div class="calc-note">Visszaellenőrizve: a számolt számlából a nettó <b>' + fmt(r.fwd.net) + '</b> ≈ cél. ' + (r.gross <= r.threshold ? 'A számla <b>nem haladja meg a ' + fmt(r.threshold) + ' Ft-os küszöböt</b>, így a járulékalap a minimumon marad.' : 'A számla <b>meghaladja a ' + fmt(r.threshold) + ' Ft-os küszöböt</b> — a járulékalap a számított jövedelemhez igazodik.') + '</div>' : '')
+    : '<div class="m-row"><span class="mr-l">Szükséges havi számla</span><span class="mr-v">— (adj meg célnettót)</span></div>';
+  var rows =
+    (f.gross > 0
+      ? '<div class="m-row"><span class="mr-l">Számlázott havi bevétel</span><span class="mr-v">' + fmt(f.gross) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Átalányjövedelem (jövedelem ' + c.costRate + '% költséghányad)</span><span class="mr-v">' + fmt(f.income) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Adóköteles rész (jövedelem − 161 400 Ft)</span><span class="mr-v">' + fmt(f.taxable) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Járulékalap ' + (f.atMinBase ? '(minimumon)' : '') + '</span><span class="mr-v">' + fmt(f.contribBase) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">TB-járulék (18,5%)</span><span class="mr-v cr">− ' + fmt(f.tb) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Szociális hozzájárulási adó (13%)</span><span class="mr-v cr">− ' + fmt(f.szocho) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">SZJA (15%)</span><span class="mr-v cr">− ' + fmt(f.szja) + '</span></div>' +
+      '<div class="m-row"><span class="mr-l">Összes teher</span><span class="mr-v cr">− ' + fmt(f.contrib + f.szja) + '</span></div>' +
+      '<div class="m-row" style="background:var(--green-dim);border:1px solid var(--green-b)"><span class="mr-l">Havi nettó</span><span class="mr-v cg">' + fmt(f.net) + '</span></div>' +
+      '<div class="calc-note">Effektív teher: <b>' + f.rate + '%</b> a számlázott bevételre · ' + (f.atMinBase ? 'a járulékalap a <b>minimumon</b> van (' + fmt(f.minBase) + ').' : 'a járulékalap a számított jövedelem (' + fmt(f.taxable) + ') lett, ami a minimum felett van.') + '</div>'
+      : '<div class="ibox ibox-b">Add meg a <b>számlázott havi bevételt</b> az előre számításhoz, vagy a <b>cél nettót</b> a visszafelé számításhoz. Megjegyzés: a minimum járulék (TB ' + fmt(money(FLATMAIN.GUAR_MIN_WAGE * FLATMAIN.TB)) + ' + szocho ' + fmt(money(FLATMAIN.GUAR_MIN_WAGE * FLATMAIN.SZOCHO)) + ' = ' + fmt(money(FLATMAIN.GUAR_MIN_WAGE * FLATMAIN.TB) + money(FLATMAIN.GUAR_MIN_WAGE * FLATMAIN.SZOCHO)) + ' Ft/hó) <b>akkor is jár</b>, ha nincs bevétel.</div>') +
+    '<div class="slbl" style="margin-top:14px">Visszafelé: célnettóból számla</div>' + reverseBlock +
+    '<div class="ibox ibox-a" style="margin-top:12px"><b>Fizetési tudnivalók</b>: az SZJA-t <b>nem vonják havonta</b> — a számított összeget <b>félre kell tenni</b>, az éves bevallásban (május 20.) fizetendő. A TB és a szocho <b>negyedévente</b>, a negyedévet követő hónap 12-ig vallandó. A minimum járulék <b>teljes hónapra</b> jár (akkor is, ha csak néhány napot dolgoztál).</div>' +
+    '<div class="ibox ibox-r" style="margin-top:10px"><b>Átminősítési kockázat</b>: a számlázás csak megbízási/vállalkozási jellegű jogviszonynál áll meg. Kötött munkaidő, a megbízó utasításai/eszközei, hosszú távú kizárólagos munkavégzés esetén a NAV <b>munkaviszonnyá minősítheti</b> (pótlólagos járulék, bírság). Ez becslés — ellenőrizd NAV-kalkulátorral vagy könyvelővel; a garantált bérminimumos besorolást is erősíttessétek meg a könyvelővel (FEOR-/TEÁOR-szám).</div>';
+  return rows;
+}
+function mainQuickTableHTML() {
+  var rows = mainQuickRows();
+  var html = '<div class="dtable-wrap" style="margin-top:6px"><table class="dtable">' +
+    '<thead><tr><th>Nettó cél</th><th>Havi számla</th><th>Napidíj (20 nap)</th><th>Napidíj (22 nap)</th></tr></thead><tbody>';
+  rows.forEach(function (r) {
+    html += '<tr><td class="dn">' + fmt(r.net) + '</td><td>' + fmt(r.gross) + '</td><td>' + fmt(r.d20) + '</td><td>' + fmt(r.d22) + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+function mainCalcPanelBody(prefix) {
+  prefix = prefix || 'ct';
+  var c = S.calc || defaultCalc();
+  var f = mainForward(c);
+  var r = mainReverse(c);
+  return '' +
+    '<div class="frow-2">' +
+    '<div class="frow"><label class="flbl">Számlázott havi bevétel (Ft)</label><input type="number" class="finput" id="' + prefix + '-gross" min="0" step="1000" value="' + (c.gross || '') + '"></div>' +
+    '<div class="frow"><label class="flbl">Cél nettó (Ft)</label><input type="number" class="finput" id="' + prefix + '-nettarget" min="0" step="10000" value="' + (c.netTarget || '') + '"></div>' +
+    '</div>' +
+    '<div class="frow"><label class="flbl">Minimum járulékalap</label>' +
+    '<select class="finput" id="' + prefix + '-minbase">' +
+    '<option value="guar"' + (!c.useMinWage ? ' selected' : '') + '>Garantált bérminimum (373 200 Ft)</option>' +
+    '<option value="min"' + (c.useMinWage ? ' selected' : '') + '>Minimálbér (322 800 Ft)</option>' +
+    '</select></div>' +
+    '<div class="frow-2">' +
+    '<div class="frow"><label class="flbl">Munkanapok</label><input type="number" class="finput" id="' + prefix + '-maindays" min="1" max="31" step="1" value="' + (c.mainDays || 22) + '"></div>' +
+    '<div class="frow"><label class="flbl">Napi munkaóra (óradíjhoz)</label><input type="number" class="finput" id="' + prefix + '-mainhpd" min="1" max="24" step="0.5" value="' + (c.mainHpd || 8) + '"></div>' +
+    '</div>' +
+    '<div id="' + prefix + '-mainres">' + mainResultsHTML(c, f, r) + '</div>' +
+    '<div class="calc-note" style="border-top:1px solid var(--border);margin-top:14px;padding-top:8px"><b>Gyorstábla</b> — garantált bérminimum alap, 20 és 22 munkanap:</div>' +
+    mainQuickTableHTML();
+}
+function wireMainCalc(prefix) {
+  prefix = prefix || 'ct';
+  ['gross', 'nettarget', 'maindays', 'mainhpd'].forEach(function (id) {
+    var el = document.getElementById(prefix + '-' + id);
+    if (el) el.addEventListener('input', function () { updateMainCalc(prefix); });
+  });
+  var mb = document.getElementById(prefix + '-minbase');
+  if (mb) mb.addEventListener('change', function () { updateMainCalc(prefix); });
+  updateMainCalc(prefix);
+}
+function updateMainCalc(prefix) {
+  prefix = prefix || 'ct';
+  function val(id) {
+    var el = document.getElementById(prefix + '-' + id);
+    return el ? el.value : '';
+  }
+  var c = S.calc = S.calc || defaultCalc();
+  c.gross = Math.max(0, parseFloat(val('gross')) || 0);
+  c.netTarget = Math.max(0, parseFloat(val('nettarget')) || 0);
+  c.mainDays = Math.min(31, Math.max(1, parseInt(val('maindays'), 10) || 22));
+  c.mainHpd = Math.min(24, Math.max(1, parseFloat(val('mainhpd')) || 8));
+  c.useMinWage = val('minbase') === 'min';
+  var resEl = document.getElementById(prefix + '-mainres');
+  if (resEl) resEl.innerHTML = mainResultsHTML(c, mainForward(c), mainReverse(c));
+  save();
+}
 function calcPanelHTML(prefix) {
+  prefix = prefix || 'ct';
+  var c = S.calc || defaultCalc();
+  var main = c.mode === 'main';
+  var toggle =
+    '<div class="cal-toggle" style="margin-bottom:16px">' +
+    '<button type="button" class="cv-btn' + (!main ? ' active' : '') + '" id="' + prefix + '-mode-side">Mellékállású (36+ óra)</button>' +
+    '<button type="button" class="cv-btn' + (main ? ' active' : '') + '" id="' + prefix + '-mode-main">Főfoglalkozású</button>' +
+    '</div>' +
+    (main ? '' : '<div class="ibox ibox-b" style="margin-bottom:14px">Heti 36+ órás munkaviszony melletti (mellékállású) átalányadózás: nincs minimum járulékalap, nincs SZJA — csak TB (18,5%) + szocho (13%) a keret feletti részre. Ha nincs heti 36+ órás munkaviszonyod, használd a <b>Főfoglalkozású</b> fület (minimum járulékalap + SZJA + visszafelé számítás).</div>');
+  return toggle + (main ? mainCalcPanelBody(prefix) : sideCalcPanelBody(prefix));
+}
+function wireCalcPanel(prefix) {
+  prefix = prefix || 'ct';
+  var side = document.getElementById(prefix + '-mode-side');
+  var main = document.getElementById(prefix + '-mode-main');
+  if (side) side.addEventListener('click', function () { setCalcMode(prefix, 'side'); });
+  if (main) main.addEventListener('click', function () { setCalcMode(prefix, 'main'); });
+  var c = S.calc = S.calc || defaultCalc();
+  if (c.mode === 'main') wireMainCalc(prefix);
+  else wireCalc(prefix);
+}
+function setCalcMode(prefix, mode) {
+  var c = S.calc = S.calc || defaultCalc();
+  c.mode = mode === 'main' ? 'main' : 'side';
+  save();
+  if (modalKey && modalMode === 'calc') renderOverlay();
+  else renderCalc();
+}
+function sideCalcPanelBody(prefix) {
   prefix = prefix || 'ct';
   var c = S.calc || defaultCalc();
   var r = flatCalc(c);
@@ -1197,16 +1395,16 @@ function updateCalc(prefix, fromId) {
 function calcApply() {
   if (!modalKey) return;
   var c = S.calc || defaultCalc();
-  var r = flatCalc(c, null, false);
+  var net = c.mode === 'main' ? mainForward(c).net : flatCalc(c, null, false).remaining;
   openModal(modalKey, 'month');
   var inc = document.getElementById('m-inc');
-  if (inc) { inc.value = Math.round(r.remaining); updateMsum(); }
+  if (inc) { inc.value = Math.round(net); updateMsum(); }
 }
 function renderCalc() {
   var el = document.getElementById('tab-calc-body');
   if (!el) return;
   el.innerHTML = calcPanelHTML('ct');
-  wireCalc('ct');
+  wireCalcPanel('ct');
   renderDailySettings();
   var en = document.getElementById('d-enable');
   if (en) en.addEventListener('change', function () {
@@ -1832,7 +2030,7 @@ function renderOverlay() {
       '<button class="btn" onclick="calcApply()">Alkalmaz a hónapra</button>' +
       '<button class="btn btn-ghost" onclick="openModal(\'' + k + '\',\'month\')">Vissza</button>' +
       '</div></div>';
-    wireCalc('co');
+    wireCalcPanel('co');
     return;
   }
   if (modalMode === 'day') {
